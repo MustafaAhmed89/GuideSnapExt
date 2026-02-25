@@ -7,6 +7,18 @@ export interface ExportOptions {
   useAnnotated: boolean;
 }
 
+// ── Helpers (defined early so they can be used by all exporters) ─────────────
+
+/** Decode the natural pixel dimensions of a data URL without rendering it. */
+function getImageDimensions(dataUrl: string): Promise<{ w: number; h: number }> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight });
+    img.onerror = () => resolve({ w: 1920, h: 1080 }); // sensible fallback
+    img.src = dataUrl;
+  });
+}
+
 // ── PDF ──────────────────────────────────────────────────────────────────────
 
 export async function exportToPDF(
@@ -54,12 +66,30 @@ export async function exportToPDF(
     doc.text(`Step ${i + 1} of ${steps.length}`, margin, 8);
     doc.text(guide.title, pageW / 2, 8, { align: 'center' });
 
-    // Screenshot
+    // Screenshot — placed with correct aspect ratio so it is never stretched
     const imgData = options.useAnnotated ? step.screenshotAnnotated : step.screenshotRaw;
     if (imgData) {
-      const imgMaxH = options.includeDescriptions ? pageH - 50 : pageH - 20;
+      const areaW = contentW;
+      const areaH = options.includeDescriptions ? pageH - 50 : pageH - 20;
       try {
-        doc.addImage(imgData, 'PNG', margin, 16, contentW, imgMaxH, undefined, 'FAST');
+        const { w: naturalW, h: naturalH } = await getImageDimensions(imgData);
+        const imgAspect = naturalW / naturalH;
+        const areaAspect = areaW / areaH;
+
+        let displayW: number, displayH: number;
+        if (imgAspect > areaAspect) {
+          // Image is wider relative to its height — constrain by width
+          displayW = areaW;
+          displayH = areaW / imgAspect;
+        } else {
+          // Image is taller relative to its width — constrain by height
+          displayH = areaH;
+          displayW = areaH * imgAspect;
+        }
+
+        // Centre horizontally within the content area
+        const imgX = margin + (areaW - displayW) / 2;
+        doc.addImage(imgData, 'PNG', imgX, 16, displayW, displayH, undefined, 'FAST');
       } catch {
         // skip broken image
       }

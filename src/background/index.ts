@@ -141,7 +141,15 @@ function annotateScreenshot(
 async function handleUserEvent(event: UserEventPayload, senderTabId: number) {
   if (recordingState !== 'recording' || !currentGuideId) return;
 
-  // 1. Capture screenshot
+  // 1. Hide overlay so it doesn't appear in the screenshot, then capture
+  try {
+    await chrome.tabs.sendMessage(senderTabId, { type: 'HIDE_OVERLAY' });
+    // Give the browser one paint cycle to actually hide the element
+    await new Promise<void>((resolve) => setTimeout(resolve, 60));
+  } catch {
+    // Tab may not have a content script (e.g. chrome:// pages) — safe to ignore
+  }
+
   let screenshotRaw = '';
   try {
     screenshotRaw = await chrome.tabs.captureVisibleTab({ format: 'png' });
@@ -149,6 +157,9 @@ async function handleUserEvent(event: UserEventPayload, senderTabId: number) {
     // Tab might not be capturable (e.g. chrome:// pages)
     screenshotRaw = '';
   }
+
+  // Restore overlay immediately after capture (fire-and-forget)
+  chrome.tabs.sendMessage(senderTabId, { type: 'SHOW_OVERLAY' }).catch(() => {});
 
   // 2. Annotate
   await ensureOffscreen();

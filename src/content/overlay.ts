@@ -120,3 +120,13 @@ export function removeOverlay() {
   stateEl = null;
   dotEl = null;
 }
+
+export function hideOverlay() {
+  const host = document.getElementById(HOST_ID) as HTMLElement | null;
+  if (host) host.style.visibility = 'hidden';
+}
+
+export function showOverlay() {
+  const host = document.getElementById(HOST_ID) as HTMLElement | null;
+  if (host) host.style.visibility = 'visible';
+}
