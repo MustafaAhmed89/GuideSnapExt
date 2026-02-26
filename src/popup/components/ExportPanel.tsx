@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { ArrowLeft, FileText, Code2, Archive, Download } from 'lucide-react';
-import { exportToPDF, exportToHTML, exportToZIP } from '../../utils/export';
+import { ArrowLeft, FileText, Code2, Archive, FileType2, Download } from 'lucide-react';
+import { exportToPDF, exportToHTML, exportToZIP, exportToDOCX } from '../../utils/export';
 import type { Guide, RecordedStep } from '../../shared/types';
 
 interface Props {
@@ -9,7 +9,7 @@ interface Props {
   onBack: () => void;
 }
 
-type Format = 'pdf' | 'html' | 'zip';
+type Format = 'pdf' | 'html' | 'zip' | 'docx';
 
 export function ExportPanel({ guide, steps, onBack }: Props) {
   const [format, setFormat] = useState<Format>('pdf');
@@ -23,7 +23,8 @@ export function ExportPanel({ guide, steps, onBack }: Props) {
       const options = { includeDescriptions, useAnnotated };
       if (format === 'pdf') await exportToPDF(guide, steps, options);
       else if (format === 'html') exportToHTML(guide, steps, options);
-      else await exportToZIP(guide, steps);
+      else if (format === 'zip') await exportToZIP(guide, steps);
+      else if (format === 'docx') await exportToDOCX(guide, steps, options);
     } finally {
       setExporting(false);
     }
@@ -31,6 +32,7 @@ export function ExportPanel({ guide, steps, onBack }: Props) {
 
   const formats: { id: Format; label: string; desc: string; Icon: typeof FileText }[] = [
     { id: 'pdf', label: 'PDF Document', desc: 'A4 landscape, one step per page', Icon: FileText },
+    { id: 'docx', label: 'Word Document', desc: '.docx — opens in Microsoft Word', Icon: FileType2 },
     { id: 'html', label: 'Interactive HTML', desc: 'Self-contained single file with sidebar', Icon: Code2 },
     { id: 'zip', label: 'Image ZIP', desc: 'Annotated PNGs + guide.json', Icon: Archive },
   ];

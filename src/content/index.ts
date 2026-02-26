@@ -1,5 +1,5 @@
 import { generateCSSSelector } from '../utils/selector';
-import { createOverlay, updateOverlay, removeOverlay } from './overlay';
+import { createOverlay, updateOverlay, removeOverlay, hideOverlay, showOverlay } from './overlay';
 import type { UserEventPayload, ElementInfo } from '../shared/types';
 
 let isRecording = false;
@@ -32,7 +32,7 @@ chrome.runtime.sendMessage({ type: 'GET_STATE' }, (response) => {
 
 // ── Listen for commands from background ──────────────────────────────────────
 
-chrome.runtime.onMessage.addListener((message) => {
+chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message.type === 'UPDATE_OVERLAY') {
     const { stepCount, state } = message.payload;
 
@@ -56,6 +56,18 @@ chrome.runtime.onMessage.addListener((message) => {
     }
 
     updateOverlay(stepCount, state);
+  }
+
+  // Hide the overlay bar so it doesn't appear in screenshots
+  if (message.type === 'HIDE_OVERLAY') {
+    hideOverlay();
+    sendResponse({ ok: true });
+    return;
+  }
+
+  // Restore the overlay bar after screenshot is taken
+  if (message.type === 'SHOW_OVERLAY') {
+    showOverlay();
   }
 });
 
