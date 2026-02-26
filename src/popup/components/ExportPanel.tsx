@@ -40,7 +40,7 @@ export function ExportPanel({ guide, steps, onBack }: Props) {
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 bg-white sticky top-0 z-10">
+      <div className="flex-shrink-0 flex items-center gap-3 px-4 py-3 border-b border-gray-100 bg-white">
         <button
           onClick={onBack}
           className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors text-gray-500"
@@ -53,7 +53,7 @@ export function ExportPanel({ guide, steps, onBack }: Props) {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-5">
+      <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4 space-y-5">
         {/* Format */}
         <div>
           <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Format</h3>
@@ -122,7 +122,7 @@ export function ExportPanel({ guide, steps, onBack }: Props) {
       </div>
 
       {/* Export button */}
-      <div className="px-4 py-3 border-t border-gray-100 bg-white">
+      <div className="flex-shrink-0 px-4 py-3 border-t border-gray-100 bg-white">
         <button
           onClick={handleExport}
           disabled={exporting || steps.length === 0}
