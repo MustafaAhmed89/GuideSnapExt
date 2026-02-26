@@ -2,6 +2,14 @@ import { generateCSSSelector } from '../utils/selector';
 import { createOverlay, updateOverlay, removeOverlay, hideOverlay, showOverlay } from './overlay';
 import type { UserEventPayload, ElementInfo } from '../shared/types';
 
+// ── Prevent duplicate initialization ─────────────────────────────────────────
+// If content script is injected multiple times (manifest + programmatic),
+// only initialize once per page load
+if ((window as any).__guidesnap_initialized__) {
+  throw new Error('GuideSnap content script already initialized');
+}
+(window as any).__guidesnap_initialized__ = true;
+
 let isRecording = false;
 let isPaused = false;
 let scrollTimer: ReturnType<typeof setTimeout> | null = null;
@@ -13,9 +21,12 @@ const SCROLL_THRESHOLD = 300;
 // on both standard (1×) and HiDPI/Retina (2×+) displays.
 const dpr = window.devicePixelRatio || 1;
 
+console.log('[GuideSnap] Content script initialized');
+
 // ── Bootstrap: ask background for current state ───────────────────────────────
 
 chrome.runtime.sendMessage({ type: 'GET_STATE' }, (response) => {
+  console.log('[GuideSnap] Initial state:', response);
   if (response?.state === 'recording') {
     isRecording = true;
     isPaused = false;
@@ -33,6 +44,8 @@ chrome.runtime.sendMessage({ type: 'GET_STATE' }, (response) => {
 // ── Listen for commands from background ──────────────────────────────────────
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  console.log('[GuideSnap] Content script received message:', message);
+
   if (message.type === 'UPDATE_OVERLAY') {
     const { stepCount, state } = message.payload;
 
@@ -45,6 +58,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     }
 
     if (state === 'recording' && !isRecording) {
+      console.log('[GuideSnap] Starting recording, attaching listeners');
       isRecording = true;
       isPaused = false;
       createOverlay();
@@ -56,6 +70,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     }
 
     updateOverlay(stepCount, state);
+    sendResponse({ ok: true });
   }
 
   // Hide the overlay bar so it doesn't appear in screenshots
@@ -68,7 +83,10 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   // Restore the overlay bar after screenshot is taken
   if (message.type === 'SHOW_OVERLAY') {
     showOverlay();
+    sendResponse({ ok: true });
   }
+
+  return true; // Keep message channel open for async responses
 });
 
 // ── Event capture ─────────────────────────────────────────────────────────────
@@ -114,6 +132,7 @@ function resolveClickTarget(el: Element): Element {
 }
 
 function onClickCapture(e: MouseEvent) {
+  console.log('[GuideSnap] Click detected, isRecording:', isRecording, 'isPaused:', isPaused);
   if (!isRecording || isPaused) return;
 
   const raw = e.target as Element | null;
@@ -128,6 +147,7 @@ function onClickCapture(e: MouseEvent) {
     pageTitle: document.title,
     pageUrl: location.href,
   };
+  console.log('[GuideSnap] Sending click event:', payload);
   sendEvent(payload);
 }
 

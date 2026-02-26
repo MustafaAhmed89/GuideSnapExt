@@ -140,6 +140,7 @@ function annotateScreenshot(
 // ── Handle USER_EVENT ─────────────────────────────────────────────────────────
 
 async function handleUserEvent(event: UserEventPayload, senderTabId: number) {
+  console.log('[GuideSnap] Received user event:', event.eventType, 'recordingState:', recordingState);
   if (recordingState !== 'recording' || !currentGuideId) return;
 
   // 1. Hide overlay so it doesn't appear in the screenshot, then capture
@@ -233,27 +234,45 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       currentGuideTitle = title;
       stepCount = 0;
 
-      // ── 2. Notify the active tab directly — fastest path to attachListeners
-      // When called from popup, sender.tab is undefined, so query for active tab
-      const tabToNotify = sender.tab?.id;
-      if (tabToNotify) {
-        // Message came from a tab (e.g., content script)
-        chrome.tabs
-          .sendMessage(tabToNotify, {
+      // ── 2. Ensure content script is active and notify tab ──────────────
+      async function ensureContentScriptAndNotify(tabId: number) {
+        try {
+          // Try to send message first to check if content script is already loaded
+          await chrome.tabs.sendMessage(tabId, {
             type: 'UPDATE_OVERLAY',
             payload: { stepCount, state: recordingState },
-          })
-          .catch(() => {});
+          });
+        } catch (err) {
+          // Content script not responding — inject it manually
+          console.log('[GuideSnap] Injecting content script into tab', tabId);
+          try {
+            await chrome.scripting.executeScript({
+              target: { tabId, allFrames: false },
+              files: ['src/content/index.ts'],
+            });
+            // Wait for content script to initialize
+            await new Promise(resolve => setTimeout(resolve, 150));
+            // Try sending message again
+            await chrome.tabs.sendMessage(tabId, {
+              type: 'UPDATE_OVERLAY',
+              payload: { stepCount, state: recordingState },
+            });
+          } catch (injectErr) {
+            console.warn('[GuideSnap] Cannot inject content script:', injectErr);
+          }
+        }
+      }
+
+      // Determine which tab to notify
+      const tabToNotify = sender.tab?.id;
+      if (tabToNotify) {
+        // Message came from a tab
+        ensureContentScriptAndNotify(tabToNotify);
       } else {
         // Message came from popup — get the active tab
-        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
           if (tabs[0]?.id) {
-            chrome.tabs
-              .sendMessage(tabs[0].id, {
-                type: 'UPDATE_OVERLAY',
-                payload: { stepCount, state: recordingState },
-              })
-              .catch(() => {});
+            await ensureContentScriptAndNotify(tabs[0].id);
           }
         });
       }
