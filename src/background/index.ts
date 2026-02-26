@@ -234,15 +234,28 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       stepCount = 0;
 
       // ── 2. Notify the active tab directly — fastest path to attachListeners
-      // broadcastState() calls chrome.tabs.query() which is itself async;
-      // sending directly to the sender tab gets UPDATE_OVERLAY there in ~1 ms.
-      if (sender.tab?.id) {
+      // When called from popup, sender.tab is undefined, so query for active tab
+      const tabToNotify = sender.tab?.id;
+      if (tabToNotify) {
+        // Message came from a tab (e.g., content script)
         chrome.tabs
-          .sendMessage(sender.tab.id, {
+          .sendMessage(tabToNotify, {
             type: 'UPDATE_OVERLAY',
             payload: { stepCount, state: recordingState },
           })
           .catch(() => {});
+      } else {
+        // Message came from popup — get the active tab
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+          if (tabs[0]?.id) {
+            chrome.tabs
+              .sendMessage(tabs[0].id, {
+                type: 'UPDATE_OVERLAY',
+                payload: { stepCount, state: recordingState },
+              })
+              .catch(() => {});
+          }
+        });
       }
 
       // ── 3. Broadcast to popup + all other tabs (fire-and-forget) ────────
