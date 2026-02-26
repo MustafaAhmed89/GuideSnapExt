@@ -1,5 +1,4 @@
 node_modules/
 dist/
-icons/
 *.local
 .DS_Store
