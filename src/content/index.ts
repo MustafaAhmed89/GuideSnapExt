@@ -94,11 +94,32 @@ function sendEvent(payload: UserEventPayload) {
   chrome.runtime.sendMessage({ type: 'USER_EVENT', payload }).catch(() => {});
 }
 
+/** Semantic tags that are meaningful click targets.
+ *  Walking up to one of these prevents "Click on span" / "Click on div" descriptions. */
+const SEMANTIC_TAGS = new Set([
+  'a', 'button', 'input', 'select', 'textarea',
+  'label', 'li', 'summary', 'details', 'option',
+]);
+const MAX_CLIMB = 5;
+
+/** Walk up from the raw click target to the nearest semantically useful ancestor.
+ *  Falls back to the original element if nothing meaningful is found within MAX_CLIMB steps. */
+function resolveClickTarget(el: Element): Element {
+  let cur: Element | null = el;
+  for (let i = 0; i < MAX_CLIMB && cur; i++) {
+    if (SEMANTIC_TAGS.has(cur.tagName.toLowerCase())) return cur;
+    cur = cur.parentElement;
+  }
+  return el;
+}
+
 function onClickCapture(e: MouseEvent) {
   if (!isRecording || isPaused) return;
 
-  const target = e.target as Element | null;
-  if (!target || isOwnOverlay(target)) return;
+  const raw = e.target as Element | null;
+  if (!raw || isOwnOverlay(raw)) return;
+
+  const target = resolveClickTarget(raw);
 
   const payload: UserEventPayload = {
     eventType: 'click',

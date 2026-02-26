@@ -91,6 +91,7 @@ function generateDescription(event: UserEventPayload): string {
     if (tag === 'a') return `Click the "${text || 'link'}" link`;
     if (tag === 'input') return `Click on input field`;
     if (tag === 'select') return `Open dropdown`;
+    if (tag === 'li') return `Click "${text || 'menu item'}"`;
     return `Click on ${tag || 'element'}${text ? ` "${text}"` : ''}`;
   }
   if (event.eventType === 'input') {
