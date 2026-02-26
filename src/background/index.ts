@@ -225,17 +225,17 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         updatedAt: Date.now(),
         stepIds: [],
       };
-      await saveGuide(guide);
-      await ensureOffscreen();
 
+      // ── 1. Update in-memory state immediately (zero cost) ──────────────
+      // Must happen before broadcastState() reads these variables.
       recordingState = 'recording';
       currentGuideId = guideId;
       currentGuideTitle = title;
       stepCount = 0;
-      await persistState();
-      broadcastState();
 
-      // Inject overlay into active tab
+      // ── 2. Notify the active tab directly — fastest path to attachListeners
+      // broadcastState() calls chrome.tabs.query() which is itself async;
+      // sending directly to the sender tab gets UPDATE_OVERLAY there in ~1 ms.
       if (sender.tab?.id) {
         chrome.tabs
           .sendMessage(sender.tab.id, {
@@ -244,7 +244,22 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           })
           .catch(() => {});
       }
+
+      // ── 3. Broadcast to popup + all other tabs (fire-and-forget) ────────
+      broadcastState();
+
+      // ── 4. Respond immediately — no need to wait for storage ────────────
       sendResponse({ ok: true, guideId });
+
+      // ── 5. Persist asynchronously (durability, not on the critical path) ─
+      await saveGuide(guide);
+      await persistState();
+
+      // ── 6. Pre-warm offscreen doc as a background task ──────────────────
+      // Not awaited: handleUserEvent() already calls ensureOffscreen() before
+      // annotation, so first-click capture is unaffected. This gives it a
+      // head-start so the first screenshot annotation is faster.
+      ensureOffscreen().catch(() => {});
     }
 
     if (message.type === 'STOP_RECORDING') {
