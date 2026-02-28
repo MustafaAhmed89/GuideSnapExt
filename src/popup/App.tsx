@@ -3,7 +3,7 @@ import { HomeView } from './components/HomeView';
 import { StepEditor } from './components/StepEditor';
 import { ExportPanel } from './components/ExportPanel';
 import { loadStepsForGuide } from '../shared/storage';
-import type { Guide, RecordedStep, RecordingState } from '../shared/types';
+import type { Guide, RecordedStep, RecordingState, GuideType } from '../shared/types';
 
 type View = 'home' | 'editor' | 'export';
 
@@ -50,8 +50,8 @@ export function App() {
     return () => chrome.runtime.onMessage.removeListener(listener);
   }, []);
 
-  async function handleStartRecording(title: string) {
-    chrome.runtime.sendMessage({ type: 'START_RECORDING', payload: { guideTitle: title } });
+  async function handleStartRecording(title: string, guideType: GuideType) {
+    chrome.runtime.sendMessage({ type: 'START_RECORDING', payload: { guideTitle: title, guideType } });
   }
 
   function handleStopRecording() {

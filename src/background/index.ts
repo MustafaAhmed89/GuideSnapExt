@@ -1,4 +1,4 @@
-import type { RecordingState, UserEventPayload, Guide, RecordedStep } from '../shared/types';
+import type { RecordingState, UserEventPayload, Guide, RecordedStep, GuideType } from '../shared/types';
 import {
   saveGuide,
   loadGuide,
@@ -12,6 +12,7 @@ import {
 let recordingState: RecordingState = 'idle';
 let currentGuideId: string | null = null;
 let currentGuideTitle = '';
+let currentGuideType: GuideType | null = null;
 let stepCount = 0;
 let offscreenReady = false;
 
@@ -22,6 +23,7 @@ async function restoreState() {
   recordingState = persisted.recordingState;
   currentGuideId = persisted.currentGuideId;
   currentGuideTitle = persisted.currentGuideTitle;
+  currentGuideType = persisted.currentGuideType ?? null;
   stepCount = persisted.stepCount;
 }
 
@@ -77,7 +79,7 @@ function broadcastState() {
 }
 
 async function persistState() {
-  await saveRecordingState({ recordingState, currentGuideId, currentGuideTitle, stepCount });
+  await saveRecordingState({ recordingState, currentGuideId, currentGuideTitle, currentGuideType, stepCount });
 }
 
 // ── Auto-description from event data ─────────────────────────────────────────
@@ -163,12 +165,17 @@ async function handleUserEvent(event: UserEventPayload, senderTabId: number) {
   // Restore overlay immediately after capture (fire-and-forget)
   chrome.tabs.sendMessage(senderTabId, { type: 'SHOW_OVERLAY' }).catch(() => {});
 
-  // 2. Annotate
-  await ensureOffscreen();
+  // 2. Annotate (skip for capture-screens mode)
   const stepNumber = stepCount + 1;
-  const screenshotAnnotated = screenshotRaw
-    ? await annotateScreenshot(screenshotRaw, stepNumber, event)
-    : '';
+  let screenshotAnnotated: string;
+  if (currentGuideType === 'capture-screens') {
+    screenshotAnnotated = screenshotRaw;
+  } else {
+    await ensureOffscreen();
+    screenshotAnnotated = screenshotRaw
+      ? await annotateScreenshot(screenshotRaw, stepNumber, event)
+      : '';
+  }
 
   // 3. Build step
   const stepId = `step-${currentGuideId}-${Date.now()}`;
@@ -219,9 +226,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.type === 'START_RECORDING') {
       const guideId = `guide-${Date.now()}`;
       const title: string = message.payload.guideTitle || 'Untitled Guide';
+      const guideType: GuideType = message.payload.guideType ?? 'how-to-tutorial';
       const guide: Guide = {
         id: guideId,
         title,
+        type: guideType,
         createdAt: Date.now(),
         updatedAt: Date.now(),
         stepIds: [],
@@ -232,6 +241,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       recordingState = 'recording';
       currentGuideId = guideId;
       currentGuideTitle = title;
+      currentGuideType = guideType;
       stepCount = 0;
 
       // ── 2. Ensure content script is active and notify tab ──────────────
@@ -243,12 +253,15 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             payload: { stepCount, state: recordingState },
           });
         } catch (err) {
-          // Content script not responding — inject it manually
+          // Content script not responding — inject it manually using the
+          // built path from the manifest (avoids hardcoding the hashed filename)
           console.log('[GuideSnap] Injecting content script into tab', tabId);
           try {
+            const csFiles: string[] | undefined = (chrome.runtime.getManifest() as any).content_scripts?.[0]?.js;
+            if (!csFiles?.length) throw new Error('No content script files found in manifest');
             await chrome.scripting.executeScript({
               target: { tabId, allFrames: false },
-              files: ['src/content/index.ts'],
+              files: csFiles,
             });
             // Wait for content script to initialize
             await new Promise(resolve => setTimeout(resolve, 150));
@@ -291,7 +304,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       // Not awaited: handleUserEvent() already calls ensureOffscreen() before
       // annotation, so first-click capture is unaffected. This gives it a
       // head-start so the first screenshot annotation is faster.
-      ensureOffscreen().catch(() => {});
+      if (currentGuideType !== 'capture-screens') {
+        ensureOffscreen().catch(() => {});
+      }
     }
 
     if (message.type === 'STOP_RECORDING') {

@@ -23,12 +23,15 @@ export interface RecordedStep {
 export interface Guide {
   id: string;
   title: string;
+  type?: GuideType;
   createdAt: number;
   updatedAt: number;
   stepIds: string[];
 }
 
 export type RecordingState = 'idle' | 'recording' | 'paused';
+
+export type GuideType = 'how-to-tutorial' | 'employee-training' | 'capture-screens';
 
 export interface UserEventPayload {
   eventType: 'click' | 'input' | 'navigate' | 'scroll';

@@ -1,19 +1,25 @@
 import { useState, useEffect } from 'react';
-import { BookOpen, Pencil, Download, Trash2, Plus, ChevronRight } from 'lucide-react';
+import { BookOpen, Pencil, Download, Trash2, Plus, ChevronRight, GraduationCap, Camera } from 'lucide-react';
 import { listGuides, deleteGuide, loadStepsForGuide } from '../../shared/storage';
 import { RecordingBadge } from './RecordingBadge';
-import type { Guide, RecordingState } from '../../shared/types';
+import type { Guide, RecordingState, GuideType } from '../../shared/types';
 
 interface Props {
   recordingState: RecordingState;
   stepCount: number;
   guideTitle: string;
-  onStartRecording: (title: string) => void;
+  onStartRecording: (title: string, guideType: GuideType) => void;
   onStopRecording: () => void;
   onPauseRecording: () => void;
   onEditGuide: (guide: Guide) => void;
   onExportGuide: (guide: Guide) => void;
 }
+
+const GUIDE_TYPES: { id: GuideType; label: string; description: string; icon: React.ElementType }[] = [
+  { id: 'how-to-tutorial',   label: 'How to Tutorial',         description: 'Step-by-step with annotated screenshots', icon: BookOpen },
+  { id: 'employee-training', label: 'Employee Training Guide', description: 'Structured training with highlights',      icon: GraduationCap },
+  { id: 'capture-screens',   label: 'Capture Screens',         description: 'Plain screenshots, no annotations',       icon: Camera },
+];
 
 export function HomeView({
   recordingState,
@@ -27,6 +33,8 @@ export function HomeView({
 }: Props) {
   const [guides, setGuides] = useState<Guide[]>([]);
   const [showTitleInput, setShowTitleInput] = useState(false);
+  const [showTypeSelector, setShowTypeSelector] = useState(false);
+  const [selectedType, setSelectedType] = useState<GuideType | null>(null);
   const [newTitle, setNewTitle] = useState('');
   const [loading, setLoading] = useState(true);
 
@@ -43,14 +51,22 @@ export function HomeView({
 
   function handleStartClick() {
     if (recordingState !== 'idle') return;
-    setShowTitleInput(true);
+    setShowTypeSelector(true);
+    setShowTitleInput(false);
+    setSelectedType(null);
     setNewTitle('');
+  }
+
+  function handleTypeSelect(type: GuideType) {
+    setSelectedType(type);
+    setShowTypeSelector(false);
+    setShowTitleInput(true);
   }
 
   function handleStartConfirm() {
     const title = newTitle.trim() || `Guide — ${new Date().toLocaleDateString()}`;
     setShowTitleInput(false);
-    onStartRecording(title);
+    onStartRecording(title, selectedType ?? 'how-to-tutorial');
   }
 
   async function handleDelete(guide: Guide) {
@@ -83,15 +99,40 @@ export function HomeView({
           onPause={onPauseRecording}
         />
 
-        {/* New guide button / title input */}
-        {recordingState === 'idle' && !showTitleInput && (
+        {/* New guide button / type selector / title input */}
+        {recordingState === 'idle' && !showTypeSelector && !showTitleInput && (
           <button
             onClick={handleStartClick}
             className="w-full flex items-center justify-center gap-2 py-2.5 bg-brand-500 hover:bg-brand-600 text-white font-semibold rounded-xl transition-colors text-sm"
           >
             <Plus size={16} />
-            New Guide
+            Add New
           </button>
+        )}
+
+        {showTypeSelector && (
+          <div className="space-y-1.5">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Choose guide type</p>
+            {GUIDE_TYPES.map(({ id, label, description, icon: Icon }) => (
+              <button
+                key={id}
+                onClick={() => handleTypeSelect(id)}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border-2 border-gray-100 hover:border-brand-500 hover:bg-brand-50 text-left transition-colors group"
+              >
+                <Icon size={18} className="text-gray-400 group-hover:text-brand-500 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-gray-800 group-hover:text-brand-500">{label}</p>
+                  <p className="text-xs text-gray-400">{description}</p>
+                </div>
+              </button>
+            ))}
+            <button
+              onClick={() => setShowTypeSelector(false)}
+              className="w-full text-xs text-gray-400 hover:text-gray-600 py-1 transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
         )}
 
         {showTitleInput && (
@@ -103,7 +144,7 @@ export function HomeView({
               onChange={(e) => setNewTitle(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') handleStartConfirm();
-                if (e.key === 'Escape') setShowTitleInput(false);
+                if (e.key === 'Escape') { setShowTitleInput(false); setShowTypeSelector(true); }
               }}
               placeholder="Guide title (e.g. How to create an invoice)"
               className="flex-1 text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500"
@@ -126,7 +167,7 @@ export function HomeView({
           <div className="text-center py-12 text-gray-400">
             <BookOpen size={32} className="mx-auto mb-3 opacity-30" />
             <p className="text-sm font-medium">No guides yet</p>
-            <p className="text-xs mt-1">Click "New Guide" and start clicking around!</p>
+            <p className="text-xs mt-1">Click "+ Add New" to create your first guide!</p>
           </div>
         ) : (
           <div className="space-y-2">

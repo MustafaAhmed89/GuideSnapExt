@@ -1,4 +1,4 @@
-import type { Guide, RecordedStep } from './types';
+import type { Guide, RecordedStep, GuideType } from './types';
 
 const DB_NAME = 'guidesnap';
 const DB_VERSION = 1;
@@ -126,6 +126,7 @@ export interface PersistedState {
   recordingState: 'idle' | 'recording' | 'paused';
   currentGuideId: string | null;
   currentGuideTitle: string;
+  currentGuideType: GuideType | null;
   stepCount: number;
 }
 
@@ -143,6 +144,7 @@ export async function loadRecordingState(): Promise<PersistedState> {
           recordingState: 'idle',
           currentGuideId: null,
           currentGuideTitle: '',
+          currentGuideType: null,
           stepCount: 0,
         }
       );
