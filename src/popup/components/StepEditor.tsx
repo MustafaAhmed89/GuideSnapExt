@@ -117,7 +117,7 @@ export function StepEditor({ guide, initialSteps, onBack, onExport }: Props) {
       </div>
 
       {/* Steps list */}
-      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
+      <div className="flex-1 min-h-0 overflow-y-auto px-4 py-3 space-y-3">
         {steps.length === 0 && (
           <div className="text-center py-12 text-gray-400">
             <p className="text-sm">No steps recorded yet.</p>

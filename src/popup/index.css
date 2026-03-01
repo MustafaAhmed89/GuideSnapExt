@@ -6,10 +6,15 @@
   box-sizing: border-box;
 }
 
+html {
+  overflow: hidden;
+}
+
 body {
   margin: 0;
   padding: 0;
   width: 380px;
+  overflow: hidden;
   background: #f8f8fb;
 }
 
