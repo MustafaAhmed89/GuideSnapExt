@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { BookOpen, Pencil, Download, Trash2, Plus, ChevronRight, GraduationCap, ArrowLeft } from 'lucide-react';
+import { BookOpen, Pencil, Download, Trash2, Plus, GraduationCap, ArrowLeft } from 'lucide-react';
 import { listGuides, deleteGuide, loadStepsForGuide } from '../../shared/storage';
 import { RecordingBadge } from './RecordingBadge';
 import type { Guide, RecordingState, GuideType } from '../../shared/types';
@@ -178,20 +178,22 @@ export function HomeView({
             <p className="text-xs mt-1">Click "+ Add New" to create your first guide!</p>
           </div>
         ) : (
-          <div className="space-y-2">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
+          <div>
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1 px-2">
               Saved Guides ({guides.length})
             </p>
-            {guides.map((guide) => (
-              <GuideCard
-                key={guide.id}
-                guide={guide}
-                onEdit={() => onEditGuide(guide)}
-                onExport={() => onExportGuide(guide)}
-                onDelete={() => handleDelete(guide)}
-                formatDate={formatDate}
-              />
-            ))}
+            <div className="divide-y divide-gray-100">
+              {guides.map((guide) => (
+                <GuideCard
+                  key={guide.id}
+                  guide={guide}
+                  onEdit={() => onEditGuide(guide)}
+                  onExport={() => onExportGuide(guide)}
+                  onDelete={() => handleDelete(guide)}
+                  formatDate={formatDate}
+                />
+              ))}
+            </div>
           </div>
         )}
       </div>
@@ -213,38 +215,42 @@ function GuideCard({
   formatDate: (ts: number) => string;
 }) {
   return (
-    <div className="bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow p-3">
-      <div className="flex items-start gap-2">
-        <div className="flex-1 min-w-0 cursor-pointer" onClick={onEdit}>
-          <p className="font-medium text-gray-900 text-sm truncate">{guide.title}</p>
-          <p className="text-xs text-gray-400 mt-0.5">
-            {guide.stepIds.length} step{guide.stepIds.length !== 1 ? 's' : ''} · {formatDate(guide.updatedAt)}
-          </p>
-        </div>
-        <ChevronRight size={16} className="text-gray-300 mt-0.5 flex-shrink-0" />
+    <div className="flex items-center gap-2 px-2 py-2.5 rounded-lg hover:bg-gray-50 transition-colors">
+      {/* Icon */}
+      <div className="flex-shrink-0 w-7 h-7 rounded-md bg-brand-50 flex items-center justify-center">
+        <BookOpen size={13} className="text-brand-500" />
       </div>
 
-      <div className="flex gap-1.5 mt-2.5 pt-2.5 border-t border-gray-50">
+      {/* Title + meta */}
+      <div className="flex-1 min-w-0 cursor-pointer" onClick={onEdit}>
+        <p className="text-sm font-medium text-gray-800 truncate leading-tight">{guide.title}</p>
+        <p className="text-[11px] text-gray-400 leading-tight">
+          {guide.stepIds.length} step{guide.stepIds.length !== 1 ? 's' : ''} · {formatDate(guide.updatedAt)}
+        </p>
+      </div>
+
+      {/* Action icons */}
+      <div className="flex items-center gap-0.5 flex-shrink-0">
         <button
           onClick={onEdit}
-          className="flex-1 flex items-center justify-center gap-1.5 py-1.5 text-xs font-medium text-gray-600 hover:text-brand-500 hover:bg-brand-50 rounded-lg transition-colors"
+          title="Edit"
+          className="p-1.5 rounded-md text-gray-400 hover:text-brand-500 hover:bg-brand-50 transition-colors"
         >
-          <Pencil size={12} />
-          Edit
+          <Pencil size={13} />
         </button>
         <button
           onClick={onExport}
-          className="flex-1 flex items-center justify-center gap-1.5 py-1.5 text-xs font-medium text-gray-600 hover:text-brand-500 hover:bg-brand-50 rounded-lg transition-colors"
+          title="Export"
+          className="p-1.5 rounded-md text-gray-400 hover:text-brand-500 hover:bg-brand-50 transition-colors"
         >
-          <Download size={12} />
-          Export
+          <Download size={13} />
         </button>
         <button
           onClick={onDelete}
-          className="flex-1 flex items-center justify-center gap-1.5 py-1.5 text-xs font-medium text-gray-600 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+          title="Delete"
+          className="p-1.5 rounded-md text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
         >
-          <Trash2 size={12} />
-          Delete
+          <Trash2 size={13} />
         </button>
       </div>
     </div>
