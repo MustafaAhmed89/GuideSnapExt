@@ -1,4 +1,5 @@
-import { Trash2, GripVertical, ExternalLink } from 'lucide-react';
+import { useRef } from 'react';
+import { Trash2, GripVertical, ExternalLink, ImagePlus } from 'lucide-react';
 import type { RecordedStep } from '../../shared/types';
 
 interface Props {
@@ -6,11 +7,13 @@ interface Props {
   index: number;
   onDescriptionChange: (id: string, desc: string) => void;
   onDelete: (id: string) => void;
+  onScreenshotUpload?: (id: string, dataUrl: string) => void;
   isDragging?: boolean;
 }
 
-export function StepCard({ step, index, onDescriptionChange, onDelete, isDragging }: Props) {
+export function StepCard({ step, index, onDescriptionChange, onDelete, onScreenshotUpload, isDragging }: Props) {
   const thumb = step.screenshotAnnotated || step.screenshotRaw;
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   function openFullSize() {
     if (!thumb) return;
@@ -18,6 +21,15 @@ export function StepCard({ step, index, onDescriptionChange, onDelete, isDraggin
     if (w) {
       w.document.write(`<img src="${thumb}" style="max-width:100%" />`);
     }
+  }
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !onScreenshotUpload) return;
+    const reader = new FileReader();
+    reader.onload = () => onScreenshotUpload(step.id, reader.result as string);
+    reader.readAsDataURL(file);
+    e.target.value = '';
   }
 
   return (
@@ -41,9 +53,9 @@ export function StepCard({ step, index, onDescriptionChange, onDelete, isDraggin
       </div>
 
       {/* Thumbnail */}
-      <div className="flex-shrink-0 relative group cursor-pointer" onClick={openFullSize}>
+      <div className="flex-shrink-0 relative group">
         {thumb ? (
-          <>
+          <div className="cursor-pointer" onClick={openFullSize}>
             <img
               src={thumb}
               alt={`Step ${index + 1}`}
@@ -55,11 +67,28 @@ export function StepCard({ step, index, onDescriptionChange, onDelete, isDraggin
                 className="text-white opacity-0 group-hover:opacity-100 transition-opacity"
               />
             </div>
-          </>
-        ) : (
-          <div className="w-28 h-20 rounded-lg border border-dashed border-gray-200 flex items-center justify-center text-gray-400 text-xs">
-            No screenshot
           </div>
+        ) : (
+          <>
+            <div
+              onClick={() => onScreenshotUpload && fileInputRef.current?.click()}
+              className={`w-28 h-20 rounded-lg border-2 border-dashed flex flex-col items-center justify-center gap-1 transition-colors ${
+                onScreenshotUpload
+                  ? 'border-gray-200 hover:border-brand-500 hover:text-brand-500 cursor-pointer text-gray-400'
+                  : 'border-gray-200 text-gray-300'
+              }`}
+            >
+              <ImagePlus size={16} />
+              <span className="text-[10px] font-medium">Upload image</span>
+            </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleFileChange}
+            />
+          </>
         )}
       </div>
 

@@ -40,6 +40,14 @@ export function StepEditor({ guide, initialSteps, onBack, onExport }: Props) {
     if (step) await saveStep({ ...step, description: desc });
   }
 
+  async function handleScreenshotUpload(id: string, dataUrl: string) {
+    const step = steps.find((s) => s.id === id);
+    if (!step) return;
+    const updated = { ...step, screenshotRaw: dataUrl, screenshotAnnotated: dataUrl };
+    await saveStep(updated);
+    setSteps((prev) => prev.map((s) => (s.id === id ? updated : s)));
+  }
+
   async function handleDelete(id: string) {
     const updated = steps.filter((s) => s.id !== id);
     await deleteStep(id);
@@ -132,6 +140,7 @@ export function StepEditor({ guide, initialSteps, onBack, onExport }: Props) {
                 handleDescriptionChange(id, desc);
               }}
               onDelete={handleDelete}
+              onScreenshotUpload={handleScreenshotUpload}
             />
           </div>
         ))}
