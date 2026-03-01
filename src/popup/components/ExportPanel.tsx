@@ -12,9 +12,10 @@ interface Props {
 type Format = 'pdf' | 'html' | 'zip' | 'docx';
 
 export function ExportPanel({ guide, steps, onBack }: Props) {
+  const isCaptureScreens = guide.type === 'capture-screens';
   const [format, setFormat] = useState<Format>('pdf');
-  const [includeDescriptions, setIncludeDescriptions] = useState(true);
-  const [useAnnotated, setUseAnnotated] = useState(true);
+  const [includeDescriptions, setIncludeDescriptions] = useState(!isCaptureScreens);
+  const [useAnnotated, setUseAnnotated] = useState(!isCaptureScreens);
   const [exporting, setExporting] = useState(false);
 
   async function handleExport() {
@@ -23,7 +24,7 @@ export function ExportPanel({ guide, steps, onBack }: Props) {
       const options = { includeDescriptions, useAnnotated };
       if (format === 'pdf') await exportToPDF(guide, steps, options);
       else if (format === 'html') exportToHTML(guide, steps, options);
-      else if (format === 'zip') await exportToZIP(guide, steps);
+      else if (format === 'zip') await exportToZIP(guide, steps, options);
       else if (format === 'docx') await exportToDOCX(guide, steps, options);
     } finally {
       setExporting(false);
@@ -34,7 +35,7 @@ export function ExportPanel({ guide, steps, onBack }: Props) {
     { id: 'pdf', label: 'PDF Document', desc: 'A4 landscape, one step per page', Icon: FileText },
     { id: 'docx', label: 'Word Document', desc: '.docx — opens in Microsoft Word', Icon: FileType2 },
     { id: 'html', label: 'Interactive HTML', desc: 'Self-contained single file with sidebar', Icon: Code2 },
-    { id: 'zip', label: 'Image ZIP', desc: 'Annotated PNGs + guide.json', Icon: Archive },
+    { id: 'zip', label: 'Image ZIP', desc: 'PNG images + guide.json', Icon: Archive },
   ];
 
   return (
@@ -98,15 +99,17 @@ export function ExportPanel({ guide, steps, onBack }: Props) {
               />
               <span className="text-sm text-gray-700">Include step descriptions</span>
             </label>
-            <label className="flex items-center gap-3 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={useAnnotated}
-                onChange={(e) => setUseAnnotated(e.target.checked)}
-                className="w-4 h-4 rounded accent-brand-500"
-              />
-              <span className="text-sm text-gray-700">Use annotated screenshots</span>
-            </label>
+            {!isCaptureScreens && (
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={useAnnotated}
+                  onChange={(e) => setUseAnnotated(e.target.checked)}
+                  className="w-4 h-4 rounded accent-brand-500"
+                />
+                <span className="text-sm text-gray-700">Use annotated screenshots</span>
+              </label>
+            )}
           </div>
         </div>
 

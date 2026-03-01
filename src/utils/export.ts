@@ -84,20 +84,25 @@ export async function exportToPDF(
     const step = steps[i];
     doc.addPage();
 
-    // Header strip
-    doc.setFillColor(255, 107, 53);
-    doc.rect(0, 0, pageW, 12, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'bold');
-    doc.text(`Step ${i + 1} of ${steps.length}`, margin, 8);
-    doc.text(guide.title, pageW / 2, 8, { align: 'center' });
+    const isCaptureScreens = guide.type === 'capture-screens';
+
+    // Header strip (skipped for capture-screens — plain screenshots only)
+    if (!isCaptureScreens) {
+      doc.setFillColor(255, 107, 53);
+      doc.rect(0, 0, pageW, 12, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      doc.text(`Step ${i + 1} of ${steps.length}`, margin, 8);
+      doc.text(guide.title, pageW / 2, 8, { align: 'center' });
+    }
 
     // Screenshot — placed with correct aspect ratio so it is never stretched
     const imgData = options.useAnnotated ? step.screenshotAnnotated : step.screenshotRaw;
     if (imgData) {
       const areaW = contentW;
-      const areaH = options.includeDescriptions ? pageH - 50 : pageH - 20;
+      const imgTop = isCaptureScreens ? margin : 16;
+      const areaH = isCaptureScreens ? pageH - margin * 2 : (options.includeDescriptions ? pageH - 50 : pageH - 20);
       try {
         const { w: naturalW, h: naturalH } = await getImageDimensions(imgData);
         const imgAspect = naturalW / naturalH;
@@ -116,7 +121,7 @@ export async function exportToPDF(
 
         // Centre horizontally within the content area
         const imgX = margin + (areaW - displayW) / 2;
-        doc.addImage(imgData, 'PNG', imgX, 16, displayW, displayH, undefined, 'FAST');
+        doc.addImage(imgData, 'PNG', imgX, imgTop, displayW, displayH, undefined, 'FAST');
       } catch {
         // skip broken image
       }
@@ -145,16 +150,17 @@ export function exportToHTML(
   steps: RecordedStep[],
   options: ExportOptions
 ): void {
+  const isCaptureScreens = guide.type === 'capture-screens';
   const stepsHTML = steps
     .map(
       (step, i) => `
     <section class="step" id="step-${i + 1}">
-      <div class="step-header">
-        <span class="step-num">${i + 1}</span>
-        ${options.includeDescriptions ? `<p class="step-desc">${escapeHtml(step.description)}</p>` : ''}
-      </div>
+      ${isCaptureScreens
+        ? (options.includeDescriptions && step.description ? `<div class="step-header"><p class="step-desc">${escapeHtml(step.description)}</p></div>` : '')
+        : `<div class="step-header"><span class="step-num">${i + 1}</span>${options.includeDescriptions ? `<p class="step-desc">${escapeHtml(step.description)}</p>` : ''}</div>`
+      }
       <img class="step-img" src="${options.useAnnotated ? step.screenshotAnnotated : step.screenshotRaw}" alt="Step ${i + 1}" loading="lazy" />
-      <div class="step-meta">${escapeHtml(step.pageTitle)} — ${escapeHtml(step.pageUrl)}</div>
+      ${isCaptureScreens ? '' : `<div class="step-meta">${escapeHtml(step.pageTitle)} — ${escapeHtml(step.pageUrl)}</div>`}
     </section>`
     )
     .join('\n');
@@ -216,7 +222,8 @@ export function exportToHTML(
 
 export async function exportToZIP(
   guide: Guide,
-  steps: RecordedStep[]
+  steps: RecordedStep[],
+  options: ExportOptions
 ): Promise<void> {
   const zip = new JSZip();
 
@@ -245,7 +252,7 @@ export async function exportToZIP(
   // images
   for (let i = 0; i < steps.length; i++) {
     const step = steps[i];
-    const dataUrl = step.screenshotAnnotated || step.screenshotRaw;
+    const dataUrl = options.useAnnotated ? step.screenshotAnnotated : step.screenshotRaw;
     if (dataUrl) {
       const base64 = dataUrl.split(',')[1];
       zip.file(`step-${String(i + 1).padStart(2, '0')}.png`, base64, { base64: true });
@@ -366,13 +373,17 @@ export async function exportToDOCX(
   for (let i = 0; i < steps.length; i++) {
     const step = steps[i];
 
-    // Step heading
-    children.push(
-      new Paragraph({
-        text: `Step ${i + 1} of ${steps.length}`,
-        heading: HeadingLevel.HEADING_1,
-      })
-    );
+    const isCaptureScreens = guide.type === 'capture-screens';
+
+    // Step heading (skipped for capture-screens)
+    if (!isCaptureScreens) {
+      children.push(
+        new Paragraph({
+          text: `Step ${i + 1} of ${steps.length}`,
+          heading: HeadingLevel.HEADING_1,
+        })
+      );
+    }
 
     // Description
     if (options.includeDescriptions && step.description) {
@@ -384,20 +395,22 @@ export async function exportToDOCX(
       );
     }
 
-    // Page URL / title metadata
-    children.push(
-      new Paragraph({
-        children: [
-          new TextRun({
-            text: `${step.pageTitle} — ${step.pageUrl}`,
-            color: 'AAAAAA',
-            size: 16,
-            italics: true,
-          }),
-        ],
-        spacing: { after: 160 },
-      })
-    );
+    // Page URL / title metadata (skipped for capture-screens)
+    if (!isCaptureScreens) {
+      children.push(
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: `${step.pageTitle} — ${step.pageUrl}`,
+              color: 'AAAAAA',
+              size: 16,
+              italics: true,
+            }),
+          ],
+          spacing: { after: 160 },
+        })
+      );
+    }
 
     // Screenshot image
     const imgData = options.useAnnotated ? step.screenshotAnnotated : step.screenshotRaw;
