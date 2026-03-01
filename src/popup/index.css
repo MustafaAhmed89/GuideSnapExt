@@ -10,7 +10,6 @@ body {
   margin: 0;
   padding: 0;
   width: 380px;
-  overflow: hidden;
   background: #f8f8fb;
 }
 
@@ -18,4 +17,8 @@ body {
   width: 380px;
   display: flex;
   flex-direction: column;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.10);
 }
