@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { BookOpen, Pencil, Download, Trash2, Plus, ChevronRight, GraduationCap } from 'lucide-react';
+import { BookOpen, Pencil, Download, Trash2, Plus, ChevronRight, GraduationCap, ArrowLeft } from 'lucide-react';
 import { listGuides, deleteGuide, loadStepsForGuide } from '../../shared/storage';
 import { RecordingBadge } from './RecordingBadge';
 import type { Guide, RecordingState, GuideType } from '../../shared/types';
@@ -135,25 +135,34 @@ export function HomeView({
         )}
 
         {showTitleInput && (
-          <div className="flex gap-2">
-            <input
-              autoFocus
-              type="text"
-              value={newTitle}
-              onChange={(e) => setNewTitle(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleStartConfirm();
-                if (e.key === 'Escape') { setShowTitleInput(false); setShowTypeSelector(true); }
-              }}
-              placeholder="Guide title (e.g. How to create an invoice)"
-              className="flex-1 text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500"
-            />
+          <div className="space-y-2">
             <button
-              onClick={handleStartConfirm}
-              className="px-3 py-2 bg-brand-500 hover:bg-brand-600 text-white rounded-xl text-sm font-semibold transition-colors"
+              onClick={() => { setShowTitleInput(false); setShowTypeSelector(true); }}
+              className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600 transition-colors"
             >
-              Start
+              <ArrowLeft size={13} />
+              Back
             </button>
+            <div className="flex gap-2">
+              <input
+                autoFocus
+                type="text"
+                value={newTitle}
+                onChange={(e) => setNewTitle(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleStartConfirm();
+                  if (e.key === 'Escape') { setShowTitleInput(false); setShowTypeSelector(true); }
+                }}
+                placeholder="Guide title (e.g. How to create an invoice)"
+                className="flex-1 text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500"
+              />
+              <button
+                onClick={handleStartConfirm}
+                className="px-3 py-2 bg-brand-500 hover:bg-brand-600 text-white rounded-xl text-sm font-semibold transition-colors"
+              >
+                Start
+              </button>
+            </div>
           </div>
         )}
       </div>
