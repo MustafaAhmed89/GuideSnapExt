@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { HomeView } from './components/HomeView';
+import { GuidesListView } from './components/GuidesListView';
 import { StepEditor } from './components/StepEditor';
 import { ExportPanel } from './components/ExportPanel';
 import { loadStepsForGuide } from '../shared/storage';
 import type { Guide, RecordedStep, RecordingState, GuideType } from '../shared/types';
 
-type View = 'home' | 'editor' | 'export';
+type View = 'home' | 'guides' | 'editor' | 'export';
 
 interface RecordingInfo {
   state: RecordingState;
@@ -76,6 +77,16 @@ export function App() {
     setView('export');
   }
 
+  if (view === 'guides') {
+    return (
+      <GuidesListView
+        onBack={() => setView('home')}
+        onEditGuide={openEditor}
+        onExportGuide={openExport}
+      />
+    );
+  }
+
   if (view === 'editor' && activeGuide) {
     return (
       <StepEditor
@@ -109,8 +120,7 @@ export function App() {
       onStartRecording={handleStartRecording}
       onStopRecording={handleStopRecording}
       onPauseRecording={handlePauseRecording}
-      onEditGuide={openEditor}
-      onExportGuide={openExport}
+      onOpenGuides={() => setView('guides')}
     />
   );
 }
