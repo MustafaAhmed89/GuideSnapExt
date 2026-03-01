@@ -12,16 +12,16 @@ interface Props {
 type Format = 'pdf' | 'html' | 'zip' | 'docx';
 
 export function ExportPanel({ guide, steps, onBack }: Props) {
-  const isCaptureScreens = guide.type === 'capture-screens';
   const [format, setFormat] = useState<Format>('pdf');
-  const [includeDescriptions, setIncludeDescriptions] = useState(!isCaptureScreens);
-  const [useAnnotated, setUseAnnotated] = useState(!isCaptureScreens);
+  const [includeDescriptions, setIncludeDescriptions] = useState(true);
+  const [includeStepNumbers, setIncludeStepNumbers] = useState(true);
+  const [useAnnotated, setUseAnnotated] = useState(true);
   const [exporting, setExporting] = useState(false);
 
   async function handleExport() {
     setExporting(true);
     try {
-      const options = { includeDescriptions, useAnnotated };
+      const options = { includeDescriptions, includeStepNumbers, useAnnotated };
       if (format === 'pdf') await exportToPDF(guide, steps, options);
       else if (format === 'html') exportToHTML(guide, steps, options);
       else if (format === 'zip') await exportToZIP(guide, steps, options);
@@ -99,17 +99,24 @@ export function ExportPanel({ guide, steps, onBack }: Props) {
               />
               <span className="text-sm text-gray-700">Include step descriptions</span>
             </label>
-            {!isCaptureScreens && (
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={useAnnotated}
-                  onChange={(e) => setUseAnnotated(e.target.checked)}
-                  className="w-4 h-4 rounded accent-brand-500"
-                />
-                <span className="text-sm text-gray-700">Use annotated screenshots</span>
-              </label>
-            )}
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={includeStepNumbers}
+                onChange={(e) => setIncludeStepNumbers(e.target.checked)}
+                className="w-4 h-4 rounded accent-brand-500"
+              />
+              <span className="text-sm text-gray-700">Include step numbering</span>
+            </label>
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={useAnnotated}
+                onChange={(e) => setUseAnnotated(e.target.checked)}
+                className="w-4 h-4 rounded accent-brand-500"
+              />
+              <span className="text-sm text-gray-700">Use annotated screenshots</span>
+            </label>
           </div>
         </div>
 
@@ -119,6 +126,7 @@ export function ExportPanel({ guide, steps, onBack }: Props) {
           <p className="text-xs text-gray-600">
             {steps.length} step{steps.length !== 1 ? 's' : ''} ·{' '}
             {useAnnotated ? 'Annotated' : 'Raw'} screenshots ·{' '}
+            {includeStepNumbers ? 'Numbered' : 'No numbering'} ·{' '}
             {includeDescriptions ? 'With' : 'Without'} descriptions
           </p>
         </div>

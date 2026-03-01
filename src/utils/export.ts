@@ -5,6 +5,7 @@ import type { Guide, RecordedStep } from '../shared/types';
 
 export interface ExportOptions {
   includeDescriptions: boolean;
+  includeStepNumbers: boolean;
   useAnnotated: boolean;
 }
 
@@ -84,10 +85,8 @@ export async function exportToPDF(
     const step = steps[i];
     doc.addPage();
 
-    const isCaptureScreens = guide.type === 'capture-screens';
-
-    // Header strip (skipped for capture-screens — plain screenshots only)
-    if (!isCaptureScreens) {
+    // Header strip (skipped when step numbering is off)
+    if (options.includeStepNumbers) {
       doc.setFillColor(255, 107, 53);
       doc.rect(0, 0, pageW, 12, 'F');
       doc.setTextColor(255, 255, 255);
@@ -101,8 +100,8 @@ export async function exportToPDF(
     const imgData = options.useAnnotated ? step.screenshotAnnotated : step.screenshotRaw;
     if (imgData) {
       const areaW = contentW;
-      const imgTop = isCaptureScreens ? margin : 16;
-      const areaH = isCaptureScreens ? pageH - margin * 2 : (options.includeDescriptions ? pageH - 50 : pageH - 20);
+      const imgTop = options.includeStepNumbers ? 16 : margin;
+      const areaH = options.includeStepNumbers ? (options.includeDescriptions ? pageH - 50 : pageH - 20) : pageH - margin * 2;
       try {
         const { w: naturalW, h: naturalH } = await getImageDimensions(imgData);
         const imgAspect = naturalW / naturalH;
@@ -150,23 +149,22 @@ export function exportToHTML(
   steps: RecordedStep[],
   options: ExportOptions
 ): void {
-  const isCaptureScreens = guide.type === 'capture-screens';
   const stepsHTML = steps
     .map(
       (step, i) => `
     <section class="step" id="step-${i + 1}">
-      ${isCaptureScreens
-        ? (options.includeDescriptions && step.description ? `<div class="step-header"><p class="step-desc">${escapeHtml(step.description)}</p></div>` : '')
-        : `<div class="step-header"><span class="step-num">${i + 1}</span>${options.includeDescriptions ? `<p class="step-desc">${escapeHtml(step.description)}</p>` : ''}</div>`
+      ${options.includeStepNumbers || options.includeDescriptions
+        ? `<div class="step-header">${options.includeStepNumbers ? `<span class="step-num">${i + 1}</span>` : ''}${options.includeDescriptions && step.description ? `<p class="step-desc">${escapeHtml(step.description)}</p>` : ''}</div>`
+        : ''
       }
       <img class="step-img" src="${options.useAnnotated ? step.screenshotAnnotated : step.screenshotRaw}" alt="Step ${i + 1}" loading="lazy" />
-      ${isCaptureScreens ? '' : `<div class="step-meta">${escapeHtml(step.pageTitle)} — ${escapeHtml(step.pageUrl)}</div>`}
+      ${options.includeStepNumbers ? `<div class="step-meta">${escapeHtml(step.pageTitle)} — ${escapeHtml(step.pageUrl)}</div>` : ''}
     </section>`
     )
     .join('\n');
 
   const sidebarLinks = steps
-    .map((_, i) => `<a href="#step-${i + 1}" class="nav-link">Step ${i + 1}</a>`)
+    .map((_, i) => `<a href="#step-${i + 1}" class="nav-link">${options.includeStepNumbers ? `Step ${i + 1}` : `${i + 1}`}</a>`)
     .join('\n');
 
   const html = `<!DOCTYPE html>
@@ -261,7 +259,7 @@ export async function exportToZIP(
 
   // Simple README viewer
   const readmeLinks = steps
-    .map((s, i) => `<li><a href="step-${String(i + 1).padStart(2, '0')}.png">Step ${i + 1}</a>: ${escapeHtml(s.description)}</li>`)
+    .map((s, i) => `<li><a href="step-${String(i + 1).padStart(2, '0')}.png">${options.includeStepNumbers ? `Step ${i + 1}` : `${i + 1}`}</a>${s.description ? `: ${escapeHtml(s.description)}` : ''}</li>`)
     .join('\n');
   zip.file(
     'README.html',
@@ -373,10 +371,8 @@ export async function exportToDOCX(
   for (let i = 0; i < steps.length; i++) {
     const step = steps[i];
 
-    const isCaptureScreens = guide.type === 'capture-screens';
-
-    // Step heading (skipped for capture-screens)
-    if (!isCaptureScreens) {
+    // Step heading (skipped when step numbering is off)
+    if (options.includeStepNumbers) {
       children.push(
         new Paragraph({
           text: `Step ${i + 1} of ${steps.length}`,
@@ -395,8 +391,8 @@ export async function exportToDOCX(
       );
     }
 
-    // Page URL / title metadata (skipped for capture-screens)
-    if (!isCaptureScreens) {
+    // Page URL / title metadata (skipped when step numbering is off)
+    if (options.includeStepNumbers) {
       children.push(
         new Paragraph({
           children: [

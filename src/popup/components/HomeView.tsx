@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { BookOpen, Pencil, Download, Trash2, Plus, ChevronRight, GraduationCap, Camera } from 'lucide-react';
+import { BookOpen, Pencil, Download, Trash2, Plus, ChevronRight, GraduationCap } from 'lucide-react';
 import { listGuides, deleteGuide, loadStepsForGuide } from '../../shared/storage';
 import { RecordingBadge } from './RecordingBadge';
 import type { Guide, RecordingState, GuideType } from '../../shared/types';
@@ -18,7 +18,6 @@ interface Props {
 const GUIDE_TYPES: { id: GuideType; label: string; description: string; icon: React.ElementType }[] = [
   { id: 'how-to-tutorial',   label: 'How to Tutorial',         description: 'Step-by-step with annotated screenshots', icon: BookOpen },
   { id: 'employee-training', label: 'Employee Training Guide', description: 'Structured training with highlights',      icon: GraduationCap },
-  { id: 'capture-screens',   label: 'Capture Screens',         description: 'Plain screenshots, no annotations',       icon: Camera },
 ];
 
 export function HomeView({
