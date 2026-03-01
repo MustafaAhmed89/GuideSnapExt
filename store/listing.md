@@ -7,9 +7,9 @@ Paste each section into the corresponding field in the
 
 ## Name (max 45 characters)
 ```
-GuideSnap - User Guide Recorder
+GuideSnap
 ```
-*(32 characters)*
+*(9 characters)*
 
 ---
 
