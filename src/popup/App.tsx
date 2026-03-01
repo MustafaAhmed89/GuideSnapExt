@@ -79,7 +79,7 @@ export function App() {
 
   if (view === 'guides') {
     return (
-      <div className="h-[600px] flex flex-col">
+      <div className="h-[598px] flex flex-col">
         <GuidesListView
           onBack={() => setView('home')}
           onEditGuide={openEditor}
@@ -91,7 +91,7 @@ export function App() {
 
   if (view === 'editor' && activeGuide) {
     return (
-      <div className="h-[600px] flex flex-col">
+      <div className="h-[598px] flex flex-col">
         <StepEditor
           guide={activeGuide}
           initialSteps={activeSteps}
@@ -108,7 +108,7 @@ export function App() {
 
   if (view === 'export' && activeGuide) {
     return (
-      <div className="h-[600px] flex flex-col">
+      <div className="h-[598px] flex flex-col">
         <ExportPanel
           guide={activeGuide}
           steps={activeSteps}
