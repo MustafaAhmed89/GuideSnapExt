@@ -53,7 +53,7 @@ export function HomeView({
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col">
       {/* Header */}
       <div className="px-4 pt-4 pb-3 bg-white border-b border-gray-100">
         <div className="flex items-center justify-between mb-3">

@@ -10,16 +10,12 @@ body {
   margin: 0;
   padding: 0;
   width: 380px;
-  min-height: 480px;
-  max-height: 600px;
   overflow: hidden;
   background: #f8f8fb;
 }
 
 #root {
   width: 380px;
-  height: 600px;
-  overflow: hidden;
   display: flex;
   flex-direction: column;
 }

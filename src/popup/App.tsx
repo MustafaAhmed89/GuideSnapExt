@@ -79,36 +79,42 @@ export function App() {
 
   if (view === 'guides') {
     return (
-      <GuidesListView
-        onBack={() => setView('home')}
-        onEditGuide={openEditor}
-        onExportGuide={openExport}
-      />
+      <div className="h-[600px] flex flex-col">
+        <GuidesListView
+          onBack={() => setView('home')}
+          onEditGuide={openEditor}
+          onExportGuide={openExport}
+        />
+      </div>
     );
   }
 
   if (view === 'editor' && activeGuide) {
     return (
-      <StepEditor
-        guide={activeGuide}
-        initialSteps={activeSteps}
-        onBack={() => setView('home')}
-        onExport={(guide, steps) => {
-          setActiveGuide(guide);
-          setActiveSteps(steps);
-          setView('export');
-        }}
-      />
+      <div className="h-[600px] flex flex-col">
+        <StepEditor
+          guide={activeGuide}
+          initialSteps={activeSteps}
+          onBack={() => setView('home')}
+          onExport={(guide, steps) => {
+            setActiveGuide(guide);
+            setActiveSteps(steps);
+            setView('export');
+          }}
+        />
+      </div>
     );
   }
 
   if (view === 'export' && activeGuide) {
     return (
-      <ExportPanel
-        guide={activeGuide}
-        steps={activeSteps}
-        onBack={() => setView(activeSteps.length > 0 ? 'editor' : 'home')}
-      />
+      <div className="h-[600px] flex flex-col">
+        <ExportPanel
+          guide={activeGuide}
+          steps={activeSteps}
+          onBack={() => setView(activeSteps.length > 0 ? 'editor' : 'home')}
+        />
+      </div>
     );
   }
 
