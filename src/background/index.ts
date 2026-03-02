@@ -84,22 +84,37 @@ async function persistState() {
 
 // ── Auto-description from event data ─────────────────────────────────────────
 
+function getBestLabel(el: import('../shared/types').ElementInfo): string {
+  return el.ariaLabel || el.labelText || el.placeholder || el.title || el.name || '';
+}
+
 function generateDescription(event: UserEventPayload): string {
-  const text = event.element?.text?.trim().substring(0, 50) ?? '';
-  const tag = event.element?.tag?.toLowerCase() ?? '';
+  const el = event.element;
+  const text = el?.text?.trim().substring(0, 50) ?? '';
+  const tag = el?.tag?.toLowerCase() ?? '';
 
   if (event.eventType === 'click') {
-    if (tag === 'button') return `Click the "${text || 'button'}" button`;
-    if (tag === 'a') return `Click the "${text || 'link'}" link`;
-    if (tag === 'input') return `Click on input field`;
-    if (tag === 'select') return `Open dropdown`;
-    if (tag === 'li') return `Click "${text || 'menu item'}"`;
-    return `Click on ${tag || 'element'}${text ? ` "${text}"` : ''}`;
+    const label = el ? getBestLabel(el) : '';
+    const display = text || label;
+
+    if (tag === 'button') return `Click the "${display || 'button'}" button`;
+    if (tag === 'a') return `Click the "${display || 'link'}" link`;
+    if (tag === 'input') {
+      const t = el?.inputType;
+      if (t === 'checkbox') return label ? `Check "${label}"` : 'Check checkbox';
+      if (t === 'radio') return label ? `Select "${label}"` : 'Select radio option';
+      if (t === 'submit' || t === 'button') return `Click the "${display || 'button'}" button`;
+      return label ? `Click on the "${label}" field` : 'Click on input field';
+    }
+    if (tag === 'select') return label ? `Open "${label}" dropdown` : 'Open dropdown';
+    if (tag === 'textarea') return label ? `Click on the "${label}" field` : 'Click on text area';
+    if (tag === 'li') return `Click "${display || 'menu item'}"`;
+    return display ? `Click "${display}"` : `Click on ${tag || 'element'}`;
   }
   if (event.eventType === 'input') {
-    const label = text || tag || 'field';
-    if (event.inputValue) return `Type "${event.inputValue}" in the ${label}`;
-    return `Enter text in the ${label}`;
+    const fieldName = (el ? getBestLabel(el) : '') || text || tag || 'field';
+    if (event.inputValue) return `Type "${event.inputValue}" in the ${fieldName}`;
+    return `Enter text in the ${fieldName}`;
   }
   if (event.eventType === 'navigate') {
     return `Navigate to: ${event.pageUrl}`;
@@ -118,22 +133,32 @@ function annotateScreenshot(
   event: UserEventPayload
 ): Promise<string> {
   return new Promise((resolve) => {
+    const requestId = `${Date.now()}-${Math.random()}`;
     const payload = {
+      requestId,
       screenshotRaw,
       stepNumber,
       element: event.element,
       clickPoint: event.clickPoint,
     };
 
-    const listener = (msg: { type: string; payload: { annotated: string } }) => {
-      if (msg.type === 'ANNOTATION_DONE') {
+    const listener = (msg: { type: string; payload: { requestId: string; annotated: string } }) => {
+      if (msg.type === 'ANNOTATION_DONE' && msg.payload.requestId === requestId) {
         chrome.runtime.onMessage.removeListener(listener);
+        clearTimeout(timeout);
         resolve(msg.payload.annotated);
       }
     };
+    // Safety timeout: if the offscreen document drops the message (e.g. listener not ready yet
+    // on the very first annotation), fall back to the raw screenshot so the step is still saved.
+    const timeout = setTimeout(() => {
+      chrome.runtime.onMessage.removeListener(listener);
+      resolve(screenshotRaw);
+    }, 8000);
     chrome.runtime.onMessage.addListener(listener);
     chrome.runtime.sendMessage({ type: 'ANNOTATE_SCREENSHOT', payload }).catch(() => {
       chrome.runtime.onMessage.removeListener(listener);
+      clearTimeout(timeout);
       resolve(screenshotRaw); // fallback: use raw
     });
   });

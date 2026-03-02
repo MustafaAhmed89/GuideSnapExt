@@ -93,8 +93,32 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
 function getElementInfo(el: Element): ElementInfo {
   const rect = el.getBoundingClientRect();
+  const tag = el.tagName.toLowerCase();
+
+  const ariaLabel = el.getAttribute('aria-label')?.trim() || undefined;
+  const placeholder = el.getAttribute('placeholder')?.trim() || undefined;
+  const name = el.getAttribute('name')?.trim() || undefined;
+  const title = el.getAttribute('title')?.trim() || undefined;
+  const inputType = tag === 'input' ? ((el as HTMLInputElement).type || undefined) : undefined;
+
+  // Find associated <label> text: first by for/id, then by ancestor walk (max 3 levels)
+  let labelText: string | undefined;
+  if (el.id) {
+    const lbl = document.querySelector(`label[for="${CSS.escape(el.id)}"]`);
+    if (lbl) labelText = (lbl as HTMLElement).innerText.trim() || undefined;
+  }
+  if (!labelText) {
+    let p = el.parentElement;
+    for (let i = 0; i < 3 && p; i++, p = p.parentElement) {
+      if (p.tagName.toLowerCase() === 'label') {
+        labelText = (p as HTMLElement).innerText.trim() || undefined;
+        break;
+      }
+    }
+  }
+
   return {
-    tag: el.tagName.toLowerCase(),
+    tag,
     text: (el as HTMLElement).innerText?.trim().substring(0, 80) ?? '',
     cssSelector: generateCSSSelector(el),
     boundingBox: {
@@ -105,6 +129,12 @@ function getElementInfo(el: Element): ElementInfo {
       width: rect.width * dpr,
       height: rect.height * dpr,
     },
+    ariaLabel,
+    placeholder,
+    name,
+    inputType,
+    title,
+    labelText,
   };
 }
 
@@ -126,6 +156,7 @@ function resolveClickTarget(el: Element): Element {
   let cur: Element | null = el;
   for (let i = 0; i < MAX_CLIMB && cur; i++) {
     if (SEMANTIC_TAGS.has(cur.tagName.toLowerCase())) return cur;
+    if (cur.hasAttribute('placeholder')) return cur;
     cur = cur.parentElement;
   }
   return el;

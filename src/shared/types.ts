@@ -3,6 +3,12 @@ export interface ElementInfo {
   text: string;
   cssSelector: string;
   boundingBox: { x: number; y: number; width: number; height: number };
+  ariaLabel?: string;
+  placeholder?: string;
+  name?: string;
+  inputType?: string;
+  title?: string;
+  labelText?: string;
 }
 
 export interface RecordedStep {
@@ -43,6 +49,7 @@ export interface UserEventPayload {
 }
 
 export interface AnnotatePayload {
+  requestId: string;
   screenshotRaw: string;
   stepNumber: number;
   element: ElementInfo | null;
