@@ -8,14 +8,14 @@ chrome.runtime.onMessage.addListener((message) => {
 
   annotateScreenshot(payload)
     .then((annotated) => {
-      chrome.runtime.sendMessage({ type: 'ANNOTATION_DONE', payload: { annotated } });
+      chrome.runtime.sendMessage({ type: 'ANNOTATION_DONE', payload: { requestId: payload.requestId, annotated } });
     })
     .catch((err) => {
       console.error('[GuideSnap offscreen] annotation failed:', err);
       // Send raw as fallback
       chrome.runtime.sendMessage({
         type: 'ANNOTATION_DONE',
-        payload: { annotated: payload.screenshotRaw },
+        payload: { requestId: payload.requestId, annotated: payload.screenshotRaw },
       });
     });
 });
