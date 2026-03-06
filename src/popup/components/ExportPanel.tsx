@@ -108,40 +108,6 @@ export function ExportPanel({ guide, steps, onBack }: Props) {
           </div>
         </div>
 
-        {/* Options */}
-        <div>
-          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Options</h3>
-          <div className="space-y-2">
-            <label className="flex items-center gap-3 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={includeDescriptions}
-                onChange={(e) => setIncludeDescriptions(e.target.checked)}
-                className="w-4 h-4 rounded accent-brand-500"
-              />
-              <span className="text-sm text-gray-700">Include step descriptions</span>
-            </label>
-            <label className="flex items-center gap-3 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={includeStepNumbers}
-                onChange={(e) => setIncludeStepNumbers(e.target.checked)}
-                className="w-4 h-4 rounded accent-brand-500"
-              />
-              <span className="text-sm text-gray-700">Include step numbering</span>
-            </label>
-            <label className="flex items-center gap-3 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={useAnnotated}
-                onChange={(e) => setUseAnnotated(e.target.checked)}
-                className="w-4 h-4 rounded accent-brand-500"
-              />
-              <span className="text-sm text-gray-700">Use annotated screenshots</span>
-            </label>
-          </div>
-        </div>
-
         {/* Header image + footer — only for PDF & DOCX */}
         {(format === 'pdf' || format === 'docx') && (
           <div>
@@ -200,6 +166,40 @@ export function ExportPanel({ guide, steps, onBack }: Props) {
             </div>
           </div>
         )}
+
+        {/* Options */}
+        <div>
+          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Options</h3>
+          <div className="space-y-2">
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={includeDescriptions}
+                onChange={(e) => setIncludeDescriptions(e.target.checked)}
+                className="w-4 h-4 rounded accent-brand-500"
+              />
+              <span className="text-sm text-gray-700">Include step descriptions</span>
+            </label>
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={includeStepNumbers}
+                onChange={(e) => setIncludeStepNumbers(e.target.checked)}
+                className="w-4 h-4 rounded accent-brand-500"
+              />
+              <span className="text-sm text-gray-700">Include step numbering</span>
+            </label>
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={useAnnotated}
+                onChange={(e) => setUseAnnotated(e.target.checked)}
+                className="w-4 h-4 rounded accent-brand-500"
+              />
+              <span className="text-sm text-gray-700">Use annotated screenshots</span>
+            </label>
+          </div>
+        </div>
 
         {/* Preview summary */}
         <div className="bg-gray-50 rounded-xl p-3">
