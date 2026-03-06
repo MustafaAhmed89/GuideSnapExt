@@ -1,12 +1,14 @@
 import { jsPDF } from 'jspdf';
 import JSZip from 'jszip';
-import { Document, Packer, Paragraph, TextRun, ImageRun, HeadingLevel, PageBreak, AlignmentType, BorderStyle } from 'docx';
+import { Document, Packer, Paragraph, TextRun, ImageRun, HeadingLevel, PageBreak, AlignmentType, BorderStyle, Footer, Header } from 'docx';
 import type { Guide, RecordedStep } from '../shared/types';
 
 export interface ExportOptions {
   includeDescriptions: boolean;
   includeStepNumbers: boolean;
   useAnnotated: boolean;
+  headerImage?: string; // base64 data URL — used in PDF and DOCX headers
+  footerText?: string;  // plain text — used in PDF and DOCX footers
 }
 
 // ── Helpers (defined early so they can be used by all exporters) ─────────────
@@ -53,7 +55,20 @@ export async function exportToPDF(
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(18);
   doc.setFont('helvetica', 'bold');
-  doc.text('GuideSnap', centerX, 16, { align: 'center' });
+
+  // If a header image is provided, place it left-aligned in the brand bar; otherwise show app name
+  if (options.headerImage) {
+    try {
+      const { w: iw, h: ih } = await getImageDimensions(options.headerImage);
+      const logoH = 18;
+      const logoW = iw * (logoH / ih);
+      doc.addImage(options.headerImage, margin, 3.5, logoW, logoH, undefined, 'FAST');
+    } catch {
+      doc.text('GuideSnap', centerX, 16, { align: 'center' });
+    }
+  } else {
+    doc.text('GuideSnap', centerX, 16, { align: 'center' });
+  }
 
   // Main title - centered and prominent
   doc.setTextColor(30, 30, 30);
@@ -85,23 +100,41 @@ export async function exportToPDF(
     const step = steps[i];
     doc.addPage();
 
-    // Header strip (skipped when step numbering is off)
-    if (options.includeStepNumbers) {
-      doc.setFillColor(255, 107, 53);
-      doc.rect(0, 0, pageW, 12, 'F');
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(9);
-      doc.setFont('helvetica', 'bold');
-      doc.text(`Step ${i + 1} of ${steps.length}`, margin, 8);
-      doc.text(guide.title, pageW / 2, 8, { align: 'center' });
+    // Header strip
+    {
+      const hasStepNumbers = options.includeStepNumbers;
+      const hasHeaderImg = !!options.headerImage;
+      // Always draw the header bar when we have either step numbers or a logo
+      if (hasStepNumbers || hasHeaderImg) {
+        doc.setFillColor(255, 107, 53);
+        doc.rect(0, 0, pageW, 12, 'F');
+      }
+      if (hasHeaderImg) {
+        try {
+          const { w: iw, h: ih } = await getImageDimensions(options.headerImage!);
+          const logoH = 8;
+          const logoW = iw * (logoH / ih);
+          doc.addImage(options.headerImage!, margin, 2, logoW, logoH, undefined, 'FAST');
+        } catch { /* skip */ }
+      }
+      if (hasStepNumbers) {
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'bold');
+        doc.text(`Step ${i + 1} of ${steps.length}`, hasHeaderImg ? pageW * 0.55 : margin, 8);
+        doc.text(guide.title, pageW / 2, 8, { align: 'center' });
+      }
     }
 
     // Screenshot — placed with correct aspect ratio so it is never stretched
     const imgData = options.useAnnotated ? step.screenshotAnnotated : step.screenshotRaw;
     if (imgData) {
       const areaW = contentW;
-      const imgTop = options.includeStepNumbers ? 16 : margin;
-      const areaH = options.includeStepNumbers ? (options.includeDescriptions ? pageH - 50 : pageH - 20) : pageH - margin * 2;
+      const hasHeader = options.includeStepNumbers || !!options.headerImage;
+      const hasFooter = options.includeDescriptions || !!options.footerText;
+      const imgTop = hasHeader ? 16 : margin;
+      const footerReserve = hasFooter ? 30 : margin;
+      const areaH = pageH - imgTop - footerReserve;
       try {
         const { w: naturalW, h: naturalH } = await getImageDimensions(imgData);
         const imgAspect = naturalW / naturalH;
@@ -126,16 +159,28 @@ export async function exportToPDF(
       }
     }
 
-    // Description
-    if (options.includeDescriptions && step.description) {
-      const descY = pageH - 26;
+    // Footer area — separator line, step description (left), footer text (right)
+    const hasDesc = options.includeDescriptions && !!step.description;
+    const hasFooterText = !!options.footerText;
+    if (hasDesc || hasFooterText) {
+      const sepY = pageH - 28;
       doc.setDrawColor(230, 230, 230);
-      doc.line(margin, descY - 4, pageW - margin, descY - 4);
-      doc.setTextColor(30, 30, 30);
-      doc.setFontSize(11);
-      doc.setFont('helvetica', 'normal');
-      const lines = doc.splitTextToSize(step.description, contentW);
-      doc.text(lines.slice(0, 2), margin, descY);
+      doc.line(margin, sepY, pageW - margin, sepY);
+
+      if (hasDesc) {
+        doc.setTextColor(30, 30, 30);
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'normal');
+        const lines = doc.splitTextToSize(step.description!, contentW * 0.65);
+        doc.text(lines.slice(0, 2), margin, pageH - 20);
+      }
+
+      if (hasFooterText) {
+        doc.setTextColor(120, 120, 120);
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'italic');
+        doc.text(options.footerText!, pageW - margin, pageH - 20, { align: 'right' });
+      }
     }
   }
 
@@ -283,21 +328,48 @@ export async function exportToDOCX(
 
   const children: Paragraph[] = [];
 
-  // Cover page: professional centered design
+  // Cover page: optional header image or brand name
+  if (options.headerImage) {
+    try {
+      const { w: iw, h: ih } = await getImageDimensions(options.headerImage);
+      const maxLogoW = 200;
+      const logoW = Math.min(iw, maxLogoW);
+      const logoH = Math.round(ih * (logoW / iw));
+      children.push(
+        new Paragraph({
+          children: [
+            new ImageRun({
+              data: dataUrlToUint8Array(options.headerImage),
+              transformation: { width: logoW, height: logoH },
+              type: 'png',
+            }),
+          ],
+          alignment: AlignmentType.CENTER,
+          spacing: { before: 1200, after: 600 },
+        })
+      );
+    } catch {
+      // fall through to brand name
+      children.push(
+        new Paragraph({
+          children: [new TextRun({ text: 'GuideSnap', bold: true, size: 32, color: 'FF6B35' })],
+          alignment: AlignmentType.CENTER,
+          spacing: { before: 2000, after: 800 },
+        })
+      );
+    }
+  } else {
+    children.push(
+      new Paragraph({
+        children: [new TextRun({ text: 'GuideSnap', bold: true, size: 32, color: 'FF6B35' })],
+        alignment: AlignmentType.CENTER,
+        spacing: { before: 2000, after: 800 },
+      })
+    );
+  }
+
+  // Cover page: rest of professional centered design
   children.push(
-    // Brand name
-    new Paragraph({
-      children: [
-        new TextRun({
-          text: 'GuideSnap',
-          bold: true,
-          size: 32,
-          color: 'FF6B35',
-        }),
-      ],
-      alignment: AlignmentType.CENTER,
-      spacing: { before: 2000, after: 800 },
-    }),
     // Main title - large and centered
     new Paragraph({
       text: guide.title,
@@ -443,10 +515,61 @@ export async function exportToDOCX(
     }
   }
 
+  // Build optional DOCX header (logo image)
+  let docxHeader: Header | undefined;
+  if (options.headerImage) {
+    try {
+      const { w: iw, h: ih } = await getImageDimensions(options.headerImage);
+      const maxLogoW = 160;
+      const logoW = Math.min(iw, maxLogoW);
+      const logoH = Math.round(ih * (logoW / iw));
+      docxHeader = new Header({
+        children: [
+          new Paragraph({
+            children: [
+              new ImageRun({
+                data: dataUrlToUint8Array(options.headerImage),
+                transformation: { width: logoW, height: logoH },
+                type: 'png',
+              }),
+            ],
+          }),
+        ],
+      });
+    } catch { /* skip */ }
+  }
+
+  // Build optional DOCX footer (plain text)
+  let docxFooter: Footer | undefined;
+  if (options.footerText) {
+    docxFooter = new Footer({
+      children: [
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: options.footerText,
+              color: '888888',
+              size: 18,
+              italics: true,
+            }),
+          ],
+          alignment: AlignmentType.CENTER,
+        }),
+      ],
+    });
+  }
+
   const doc = new Document({
     creator: 'GuideSnap',
     title: guide.title,
-    sections: [{ properties: {}, children }],
+    sections: [
+      {
+        properties: {},
+        headers: docxHeader ? { default: docxHeader } : undefined,
+        footers: docxFooter ? { default: docxFooter } : undefined,
+        children,
+      },
+    ],
   });
 
   const blob = await Packer.toBlob(doc);
