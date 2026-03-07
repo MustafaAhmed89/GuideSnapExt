@@ -120,6 +120,35 @@ export async function deleteGuide(id: string): Promise<void> {
   await setAllGuides(all);
 }
 
+// ── Branding profile persistence ─────────────────────────────────────────────
+
+const BRANDING_KEY = 'guidesnap_branding';
+
+export interface BrandingProfile {
+  headerImage?: string; // base64 data URL
+  footerText?: string;
+}
+
+export async function saveBrandingProfile(profile: BrandingProfile): Promise<void> {
+  return new Promise((resolve) => {
+    chrome.storage.local.set({ [BRANDING_KEY]: profile }, resolve);
+  });
+}
+
+export async function loadBrandingProfile(): Promise<BrandingProfile> {
+  return new Promise((resolve) => {
+    chrome.storage.local.get(BRANDING_KEY, (result) => {
+      resolve((result[BRANDING_KEY] as BrandingProfile) ?? {});
+    });
+  });
+}
+
+export async function clearBrandingProfile(): Promise<void> {
+  return new Promise((resolve) => {
+    chrome.storage.local.remove(BRANDING_KEY, resolve);
+  });
+}
+
 // ── Recording state persistence ──────────────────────────────────────────────
 
 export interface PersistedState {
