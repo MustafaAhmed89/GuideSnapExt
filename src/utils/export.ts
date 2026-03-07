@@ -100,12 +100,10 @@ export async function exportToPDF(
     const step = steps[i];
     doc.addPage();
 
-    // Header strip
+    // Header bar — logo (left) + guide title (centre); step number moves below
     {
-      const hasStepNumbers = options.includeStepNumbers;
       const hasHeaderImg = !!options.headerImage;
-      // Always draw the header bar when we have either step numbers or a logo
-      if (hasStepNumbers || hasHeaderImg) {
+      if (options.includeStepNumbers || hasHeaderImg) {
         doc.setFillColor(255, 107, 53);
         doc.rect(0, 0, pageW, 12, 'F');
       }
@@ -117,13 +115,21 @@ export async function exportToPDF(
           doc.addImage(options.headerImage!, margin, 2, logoW, logoH, undefined, 'FAST');
         } catch { /* skip */ }
       }
-      if (hasStepNumbers) {
+      // Guide title centred in bar (contextual, always shown when bar is visible)
+      if (options.includeStepNumbers || hasHeaderImg) {
         doc.setTextColor(255, 255, 255);
         doc.setFontSize(9);
         doc.setFont('helvetica', 'bold');
-        doc.text(`Step ${i + 1} of ${steps.length}`, hasHeaderImg ? pageW * 0.55 : margin, 8);
         doc.text(guide.title, pageW / 2, 8, { align: 'center' });
       }
+    }
+
+    // Step label — rendered below the header bar, NOT inside it
+    if (options.includeStepNumbers) {
+      doc.setTextColor(255, 107, 53);
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.text(`Step ${i + 1} of ${steps.length}`, margin, 20);
     }
 
     // Screenshot — placed with correct aspect ratio so it is never stretched
@@ -132,8 +138,9 @@ export async function exportToPDF(
       const areaW = contentW;
       const hasHeader = options.includeStepNumbers || !!options.headerImage;
       const hasFooter = options.includeDescriptions || !!options.footerText;
-      const imgTop = hasHeader ? 16 : margin;
-      const footerReserve = hasFooter ? 30 : margin;
+      // imgTop pushed to 24 to clear both the header bar (12mm) and step label (20mm)
+      const imgTop = hasHeader ? 24 : margin;
+      const footerReserve = hasFooter ? 36 : margin;
       const areaH = pageH - imgTop - footerReserve;
       try {
         const { w: naturalW, h: naturalH } = await getImageDimensions(imgData);
@@ -142,16 +149,13 @@ export async function exportToPDF(
 
         let displayW: number, displayH: number;
         if (imgAspect > areaAspect) {
-          // Image is wider relative to its height — constrain by width
           displayW = areaW;
           displayH = areaW / imgAspect;
         } else {
-          // Image is taller relative to its width — constrain by height
           displayH = areaH;
           displayW = areaH * imgAspect;
         }
 
-        // Centre horizontally within the content area
         const imgX = margin + (areaW - displayW) / 2;
         doc.addImage(imgData, 'PNG', imgX, imgTop, displayW, displayH, undefined, 'FAST');
       } catch {
@@ -159,27 +163,29 @@ export async function exportToPDF(
       }
     }
 
-    // Footer area — separator line, step description (left), footer text (right)
+    // Footer area — separator line, then description and footer text on separate rows
     const hasDesc = options.includeDescriptions && !!step.description;
     const hasFooterText = !!options.footerText;
     if (hasDesc || hasFooterText) {
-      const sepY = pageH - 28;
+      // Separator
       doc.setDrawColor(230, 230, 230);
-      doc.line(margin, sepY, pageW - margin, sepY);
+      doc.line(margin, pageH - 34, pageW - margin, pageH - 34);
 
+      // Row 1: step description (left-aligned)
       if (hasDesc) {
         doc.setTextColor(30, 30, 30);
-        doc.setFontSize(11);
+        doc.setFontSize(10);
         doc.setFont('helvetica', 'normal');
-        const lines = doc.splitTextToSize(step.description!, contentW * 0.65);
-        doc.text(lines.slice(0, 2), margin, pageH - 20);
+        const lines = doc.splitTextToSize(step.description!, contentW * 0.75);
+        doc.text(lines.slice(0, 2), margin, pageH - 26);
       }
 
+      // Row 2: footer text (right-aligned, own line — no collision with description)
       if (hasFooterText) {
-        doc.setTextColor(120, 120, 120);
-        doc.setFontSize(9);
+        doc.setTextColor(140, 140, 140);
+        doc.setFontSize(8);
         doc.setFont('helvetica', 'italic');
-        doc.text(options.footerText!, pageW - margin, pageH - 20, { align: 'right' });
+        doc.text(options.footerText!, pageW - margin, pageH - 10, { align: 'right' });
       }
     }
   }
