@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
-import { ArrowLeft, Plus } from 'lucide-react';
+import { ArrowLeft, Plus, Eye } from 'lucide-react';
 import { StepCard } from './StepCard';
+import { GuidePreview } from './GuidePreview';
 import { saveStep, deleteStep, saveGuide } from '../../shared/storage';
 import type { RecordedStep, Guide } from '../../shared/types';
 
@@ -14,6 +15,8 @@ interface Props {
 export function StepEditor({ guide, initialSteps, onBack, onExport }: Props) {
   const [steps, setSteps] = useState<RecordedStep[]>(initialSteps);
   const [saving, setSaving] = useState(false);
+  const [previewing, setPreviewing] = useState(false);
+  const [previewIndex, setPreviewIndex] = useState(0);
   const dragItem = useRef<number | null>(null);
   const dragOver = useRef<number | null>(null);
 
@@ -95,7 +98,18 @@ export function StepEditor({ guide, initialSteps, onBack, onExport }: Props) {
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="relative flex flex-col h-full">
+      {/* Guide preview overlay */}
+      {previewing && (
+        <GuidePreview
+          guide={guide}
+          steps={steps}
+          currentIndex={previewIndex}
+          onNavigate={setPreviewIndex}
+          onClose={() => setPreviewing(false)}
+        />
+      )}
+
       {/* Header */}
       <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 bg-white sticky top-0 z-10">
         <button
@@ -108,6 +122,14 @@ export function StepEditor({ guide, initialSteps, onBack, onExport }: Props) {
           <h2 className="font-semibold text-gray-900 truncate text-sm">{guide.title}</h2>
           <p className="text-xs text-gray-400">{steps.length} steps {saving ? '· Saving…' : ''}</p>
         </div>
+        <button
+          onClick={() => { setPreviewIndex(0); setPreviewing(true); }}
+          disabled={steps.length === 0}
+          className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors text-gray-500 disabled:opacity-30"
+          title="Preview guide"
+        >
+          <Eye size={18} />
+        </button>
         <button
           onClick={() => onExport(guide, steps)}
           className="px-3 py-1.5 bg-brand-500 text-white text-xs font-semibold rounded-lg hover:bg-brand-600 transition-colors"
