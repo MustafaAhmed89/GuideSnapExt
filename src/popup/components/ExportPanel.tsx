@@ -1,6 +1,7 @@
-import { useState, useRef } from 'react';
-import { ArrowLeft, FileText, Code2, Archive, FileType2, Download, Upload, X } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { ArrowLeft, FileText, Code2, Archive, FileType2, Download, Upload, X, Save, Trash2, Check } from 'lucide-react';
 import { exportToPDF, exportToHTML, exportToZIP, exportToDOCX } from '../../utils/export';
+import { saveBrandingProfile, loadBrandingProfile, clearBrandingProfile } from '../../shared/storage';
 import type { Guide, RecordedStep } from '../../shared/types';
 
 interface Props {
@@ -19,7 +20,33 @@ export function ExportPanel({ guide, steps, onBack }: Props) {
   const [headerImage, setHeaderImage] = useState<string | undefined>(undefined);
   const [footerText, setFooterText] = useState('');
   const [exporting, setExporting] = useState(false);
+  const [savedConfirm, setSavedConfirm] = useState(false);
+  const [hasSavedProfile, setHasSavedProfile] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Load saved branding profile on mount
+  useEffect(() => {
+    loadBrandingProfile().then((profile) => {
+      if (profile.headerImage) setHeaderImage(profile.headerImage);
+      if (profile.footerText) setFooterText(profile.footerText);
+      if (profile.headerImage || profile.footerText) setHasSavedProfile(true);
+    });
+  }, []);
+
+  async function handleSaveBranding() {
+    await saveBrandingProfile({ headerImage, footerText: footerText || undefined });
+    setHasSavedProfile(true);
+    setSavedConfirm(true);
+    setTimeout(() => setSavedConfirm(false), 2000);
+  }
+
+  async function handleClearBranding() {
+    await clearBrandingProfile();
+    setHeaderImage(undefined);
+    setFooterText('');
+    setHasSavedProfile(false);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  }
 
   function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -111,9 +138,32 @@ export function ExportPanel({ guide, steps, onBack }: Props) {
         {/* Header image + footer — only for PDF & DOCX */}
         {(format === 'pdf' || format === 'docx') && (
           <div>
-            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-              Branding <span className="normal-case font-normal text-gray-400">(optional)</span>
-            </h3>
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                Branding <span className="normal-case font-normal text-gray-400">(optional)</span>
+              </h3>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={handleSaveBranding}
+                  disabled={!headerImage && !footerText.trim()}
+                  title="Save as default branding"
+                  className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium transition-colors disabled:opacity-30 disabled:cursor-not-allowed text-brand-500 hover:bg-brand-50"
+                >
+                  {savedConfirm ? <Check size={12} /> : <Save size={12} />}
+                  {savedConfirm ? 'Saved!' : 'Save default'}
+                </button>
+                {hasSavedProfile && (
+                  <button
+                    onClick={handleClearBranding}
+                    title="Clear saved branding"
+                    className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                  >
+                    <Trash2 size={12} />
+                    Clear
+                  </button>
+                )}
+              </div>
+            </div>
             <div className="space-y-3">
               {/* Header image upload */}
               <div>
