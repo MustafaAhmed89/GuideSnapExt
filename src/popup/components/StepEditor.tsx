@@ -8,11 +8,12 @@ import type { RecordedStep, Guide } from '../../shared/types';
 interface Props {
   guide: Guide;
   initialSteps: RecordedStep[];
+  large?: boolean;
   onBack: () => void;
   onExport: (guide: Guide, steps: RecordedStep[]) => void;
 }
 
-export function StepEditor({ guide, initialSteps, onBack, onExport }: Props) {
+export function StepEditor({ guide, initialSteps, large, onBack, onExport }: Props) {
   const [steps, setSteps] = useState<RecordedStep[]>(initialSteps);
   const [saving, setSaving] = useState(false);
   const [previewing, setPreviewing] = useState(false);
@@ -41,6 +42,27 @@ export function StepEditor({ guide, initialSteps, onBack, onExport }: Props) {
   async function handleDescriptionBlur(id: string, desc: string) {
     const step = steps.find((s) => s.id === id);
     if (step) await saveStep({ ...step, description: desc });
+  }
+
+  function handleExtraFieldChange(id: string, value: string) {
+    setSteps((prev) =>
+      prev.map((s) => {
+        if (s.id !== id) return s;
+        if (guide.type === 'how-to-tutorial') return { ...s, tip: value };
+        if (guide.type === 'employee-training') return { ...s, whyItMatters: value };
+        return s;
+      })
+    );
+  }
+
+  async function handleExtraFieldBlur(id: string, value: string) {
+    const step = steps.find((s) => s.id === id);
+    if (!step) return;
+    const updated =
+      guide.type === 'how-to-tutorial'
+        ? { ...step, tip: value }
+        : { ...step, whyItMatters: value };
+    await saveStep(updated);
   }
 
   async function handleScreenshotUpload(id: string, dataUrl: string) {
@@ -140,6 +162,12 @@ export function StepEditor({ guide, initialSteps, onBack, onExport }: Props) {
 
       {/* Steps list */}
       <div className="flex-1 min-h-0 overflow-y-auto px-4 py-3 space-y-3">
+        {guide.type === 'employee-training' && guide.learningObjectives && (
+          <div className="bg-blue-50 border border-blue-100 rounded-xl px-3 py-2.5">
+            <p className="text-[11px] font-semibold text-blue-600 uppercase tracking-wide mb-1">Learning Objectives</p>
+            <p className="text-xs text-blue-800 leading-relaxed">{guide.learningObjectives}</p>
+          </div>
+        )}
         {steps.length === 0 && (
           <div className="text-center py-12 text-gray-400">
             <p className="text-sm">No steps recorded yet.</p>
@@ -158,9 +186,13 @@ export function StepEditor({ guide, initialSteps, onBack, onExport }: Props) {
             <StepCard
               step={step}
               index={i}
+              guideType={guide.type}
+              large={large}
               onDescriptionChange={(id, desc) => {
                 handleDescriptionChange(id, desc);
               }}
+              onExtraFieldChange={handleExtraFieldChange}
+              onExtraFieldBlur={handleExtraFieldBlur}
               onDelete={handleDelete}
               onScreenshotUpload={handleScreenshotUpload}
             />

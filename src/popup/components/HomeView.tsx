@@ -7,7 +7,7 @@ interface Props {
   recordingState: RecordingState;
   stepCount: number;
   guideTitle: string;
-  onStartRecording: (title: string, guideType: GuideType) => void;
+  onStartRecording: (title: string, guideType: GuideType, learningObjectives?: string) => void;
   onStopRecording: () => void;
   onPauseRecording: () => void;
   onOpenGuides: () => void;
@@ -15,7 +15,7 @@ interface Props {
 
 const GUIDE_TYPES: { id: GuideType; label: string; description: string; icon: React.ElementType }[] = [
   { id: 'how-to-tutorial',   label: 'How to Tutorial',         description: 'Step-by-step with annotated screenshots', icon: BookOpen },
-  { id: 'employee-training', label: 'Employee Training Guide', description: 'Structured training with highlights',      icon: GraduationCap },
+  { id: 'employee-training', label: 'Training/Implementation Guide', description: 'Structured training with learning objectives', icon: GraduationCap },
 ];
 
 export function HomeView({
@@ -31,6 +31,7 @@ export function HomeView({
   const [showTypeSelector, setShowTypeSelector] = useState(false);
   const [selectedType, setSelectedType] = useState<GuideType | null>(null);
   const [newTitle, setNewTitle] = useState('');
+  const [learningObjectives, setLearningObjectives] = useState('');
 
   function handleStartClick() {
     if (recordingState !== 'idle') return;
@@ -44,12 +45,13 @@ export function HomeView({
     setSelectedType(type);
     setShowTypeSelector(false);
     setShowTitleInput(true);
+    setLearningObjectives('');
   }
 
   function handleStartConfirm() {
     const title = newTitle.trim() || `Guide — ${new Date().toLocaleDateString()}`;
     setShowTitleInput(false);
-    onStartRecording(title, selectedType ?? 'how-to-tutorial');
+    onStartRecording(title, selectedType ?? 'how-to-tutorial', learningObjectives.trim() || undefined);
   }
 
   return (
@@ -146,6 +148,20 @@ export function HomeView({
                 Start
               </button>
             </div>
+            {selectedType === 'employee-training' && (
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">
+                  Learning objectives <span className="text-gray-400">(optional)</span>
+                </label>
+                <textarea
+                  rows={3}
+                  value={learningObjectives}
+                  onChange={(e) => setLearningObjectives(e.target.value)}
+                  placeholder="e.g. Know how to submit an expense report, Understand escalation paths"
+                  className="w-full text-xs border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500 resize-none"
+                />
+              </div>
+            )}
           </div>
         )}
       </div>

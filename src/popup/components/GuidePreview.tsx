@@ -39,7 +39,7 @@ export function GuidePreview({ guide, steps, currentIndex, onNavigate, onClose }
   const showOverflow = total > 10;
 
   return (
-    <div className="absolute inset-0 z-50 flex flex-col bg-gray-900">
+    <div className="fixed inset-0 z-50 flex flex-col bg-gray-900">
       {/* Header */}
       <div className="flex-shrink-0 flex items-center gap-2 px-3 py-2.5 bg-gray-900 border-b border-gray-700">
         <div className="flex-1 min-w-0">

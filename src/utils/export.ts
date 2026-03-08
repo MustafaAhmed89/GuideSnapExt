@@ -78,10 +78,30 @@ export async function exportToPDF(
   doc.text(titleLines, centerX, centerY - 10, { align: 'center' });
 
   // Subtitle
+  const pdfSubtitle = guide.type === 'employee-training'
+    ? 'Training & Implementation Guide'
+    : 'Step-by-Step User Guide';
   doc.setFontSize(14);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(100, 100, 100);
-  doc.text('Step-by-Step User Guide', centerX, centerY + 15, { align: 'center' });
+  doc.text(pdfSubtitle, centerX, centerY + 15, { align: 'center' });
+
+  // Decorative line
+  doc.setDrawColor(255, 107, 53);
+  doc.setLineWidth(0.5);
+  doc.line(centerX - 30, centerY + 25, centerX + 30, centerY + 25);
+
+  // Learning objectives block (employee-training only)
+  if (guide.type === 'employee-training' && guide.learningObjectives) {
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(60, 60, 60);
+    doc.text('Learning Objectives', centerX, centerY + 36, { align: 'center' });
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(90, 90, 90);
+    const objLines = doc.splitTextToSize(guide.learningObjectives, pageW - margin * 8);
+    doc.text(objLines.slice(0, 3), centerX, centerY + 43, { align: 'center' });
+  }
 
   // Metadata - centered at bottom
   doc.setFontSize(11);
@@ -89,11 +109,6 @@ export async function exportToPDF(
   const dateStr = new Date(guide.createdAt).toLocaleDateString();
   doc.text(`Created: ${dateStr}`, centerX, pageH - 40, { align: 'center' });
   doc.text(`${steps.length} step${steps.length !== 1 ? 's' : ''}`, centerX, pageH - 32, { align: 'center' });
-
-  // Decorative line
-  doc.setDrawColor(255, 107, 53);
-  doc.setLineWidth(0.5);
-  doc.line(centerX - 30, centerY + 25, centerX + 30, centerY + 25);
 
   // Step pages
   for (let i = 0; i < steps.length; i++) {
@@ -188,6 +203,35 @@ export async function exportToPDF(
         doc.text(options.footerText!, pageW - margin, pageH - 10, { align: 'right' });
       }
     }
+
+    // Type-specific callout box at bottom of step page
+    if (guide.type === 'how-to-tutorial' && step.tip) {
+      const boxY = pageH - 11;
+      doc.setFillColor(255, 247, 237);
+      doc.roundedRect(margin, boxY - 5, contentW * 0.65, 9, 1.5, 1.5, 'F');
+      doc.setFontSize(7.5);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(194, 65, 12);
+      doc.text('TIP', margin + 3, boxY + 1.5);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(124, 45, 18);
+      const tipLine = doc.splitTextToSize(step.tip, contentW * 0.55)[0];
+      doc.text(tipLine, margin + 14, boxY + 1.5);
+    }
+
+    if (guide.type === 'employee-training' && step.whyItMatters) {
+      const boxY = pageH - 11;
+      doc.setFillColor(239, 246, 255);
+      doc.roundedRect(margin, boxY - 5, contentW * 0.75, 9, 1.5, 1.5, 'F');
+      doc.setFontSize(7.5);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(29, 78, 216);
+      doc.text('WHY THIS MATTERS', margin + 3, boxY + 1.5);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(30, 58, 138);
+      const whyLine = doc.splitTextToSize(step.whyItMatters, contentW * 0.5)[0];
+      doc.text(whyLine, margin + 46, boxY + 1.5);
+    }
   }
 
   doc.save(`${sanitizeFilename(guide.title)}.pdf`);
@@ -200,6 +244,16 @@ export function exportToHTML(
   steps: RecordedStep[],
   options: ExportOptions
 ): void {
+  const isTraining = guide.type === 'employee-training';
+  const guideSubtitle = isTraining ? 'Training &amp; Implementation Guide' : 'Step-by-Step User Guide';
+
+  const objectivesHTML = isTraining && guide.learningObjectives
+    ? `<div class="objectives-box">
+        <p class="objectives-title">Learning Objectives</p>
+        <p class="objectives-body">${escapeHtml(guide.learningObjectives)}</p>
+      </div>`
+    : '';
+
   const stepsHTML = steps
     .map(
       (step, i) => `
@@ -210,6 +264,8 @@ export function exportToHTML(
       }
       <img class="step-img" src="${options.useAnnotated ? step.screenshotAnnotated : step.screenshotRaw}" alt="Step ${i + 1}" loading="lazy" />
       ${options.includeStepNumbers ? `<div class="step-meta">${escapeHtml(step.pageTitle)} — ${escapeHtml(step.pageUrl)}</div>` : ''}
+      ${guide.type === 'how-to-tutorial' && step.tip ? `<div class="step-tip"><strong>Tip:</strong> ${escapeHtml(step.tip)}</div>` : ''}
+      ${guide.type === 'employee-training' && step.whyItMatters ? `<div class="step-why"><strong>Why this matters:</strong> ${escapeHtml(step.whyItMatters)}</div>` : ''}
     </section>`
     )
     .join('\n');
@@ -231,6 +287,7 @@ export function exportToHTML(
   .sidebar h2 { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #FF6B35; padding: 0 20px 16px; }
   .nav-link { display: block; padding: 8px 20px; color: #ccc; text-decoration: none; font-size: 13px; border-left: 3px solid transparent; transition: all .15s; }
   .nav-link:hover { background: rgba(255,107,53,.1); color: #fff; border-left-color: #FF6B35; }
+
   .main { flex: 1; padding: 40px; max-width: 960px; }
   .cover { background: linear-gradient(135deg, #FF6B35 0%, #ff8555 100%); border-radius: 16px; padding: 60px 40px; text-align: center; margin-bottom: 48px; box-shadow: 0 8px 24px rgba(255,107,53,.25); }
   .cover-brand { font-size: 16px; font-weight: 700; color: rgba(255,255,255,.9); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 24px; }
@@ -238,12 +295,18 @@ export function exportToHTML(
   .guide-subtitle { font-size: 18px; color: rgba(255,255,255,.85); margin-bottom: 32px; font-style: italic; }
   .guide-divider { width: 80px; height: 2px; background: rgba(255,255,255,.5); margin: 0 auto 32px; }
   .guide-meta { font-size: 14px; color: rgba(255,255,255,.8); }
+  .objectives-box { background: #eff6ff; border-left: 4px solid #3b82f6; border-radius: 8px; padding: 20px 24px; margin-bottom: 32px; }
+  .objectives-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: #2563eb; margin-bottom: 8px; }
+  .objectives-body { font-size: 14px; color: #1e3a8a; line-height: 1.6; }
   .step { background: #fff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,.08); margin-bottom: 32px; overflow: hidden; }
   .step-header { display: flex; align-items: flex-start; gap: 14px; padding: 20px 24px 16px; }
   .step-num { background: #FF6B35; color: #fff; font-size: 13px; font-weight: 700; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
   .step-desc { font-size: 15px; line-height: 1.5; padding-top: 4px; }
   .step-img { width: 100%; display: block; border-top: 1px solid #f0f0f0; }
   .step-meta { font-size: 11px; color: #aaa; padding: 10px 24px; border-top: 1px solid #f0f0f0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .step-tip { background: #fff7ed; border-left: 3px solid #f97316; padding: 10px 16px; font-size: 13px; color: #9a3412; }
+  .step-why { background: #eff6ff; border-left: 3px solid #3b82f6; padding: 10px 16px; font-size: 13px; color: #1e40af; }
+
 </style>
 </head>
 <body>
@@ -255,10 +318,11 @@ export function exportToHTML(
   <div class="cover">
     <div class="cover-brand">GuideSnap</div>
     <h1 class="guide-title">${escapeHtml(guide.title)}</h1>
-    <p class="guide-subtitle">Step-by-Step User Guide</p>
+    <p class="guide-subtitle">${guideSubtitle}</p>
     <div class="guide-divider"></div>
     <p class="guide-meta">Created ${new Date(guide.createdAt).toLocaleDateString()} &middot; ${steps.length} step${steps.length !== 1 ? 's' : ''}</p>
   </div>
+  ${objectivesHTML}
   ${stepsHTML}
 </main>
 </body>
