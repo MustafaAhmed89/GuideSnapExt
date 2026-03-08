@@ -3,6 +3,7 @@ import { ArrowLeft, Plus, Eye } from 'lucide-react';
 import { StepCard } from './StepCard';
 import { GuidePreview } from './GuidePreview';
 import { saveStep, deleteStep, saveGuide } from '../../shared/storage';
+import { annotateScreenshot } from '../../utils/annotation';
 import type { RecordedStep, Guide } from '../../shared/types';
 
 interface Props {
@@ -24,15 +25,31 @@ export function StepEditor({ guide, initialSteps, large, onBack, onExport }: Pro
   async function persistSteps(updated: RecordedStep[]) {
     setSaving(true);
     const reindexed = updated.map((s, i) => ({ ...s, index: i }));
-    await Promise.all(reindexed.map(saveStep));
+
+    // Re-annotate each step with its new position number so badges stay correct
+    const reannotated = await Promise.all(
+      reindexed.map(async (s, i) => {
+        if (!s.screenshotRaw || guide.type === 'capture-screens') return s;
+        const newAnnotated = await annotateScreenshot({
+          requestId: s.id,
+          screenshotRaw: s.screenshotRaw,
+          stepNumber: i + 1,
+          element: s.element,
+          clickPoint: s.clickPoint,
+        });
+        return { ...s, screenshotAnnotated: newAnnotated };
+      })
+    );
+
+    await Promise.all(reannotated.map(saveStep));
     const updatedGuide: Guide = {
       ...guide,
-      stepIds: reindexed.map((s) => s.id),
+      stepIds: reannotated.map((s) => s.id),
       updatedAt: Date.now(),
     };
     await saveGuide(updatedGuide);
     setSaving(false);
-    return reindexed;
+    return reannotated;
   }
 
   function handleDescriptionChange(id: string, desc: string) {
