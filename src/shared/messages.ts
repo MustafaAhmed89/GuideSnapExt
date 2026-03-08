@@ -1,7 +1,7 @@
 import type { RecordingState, UserEventPayload, AnnotatePayload, GuideType } from './types';
 
 export type ExtensionMessage =
-  | { type: 'START_RECORDING'; payload: { guideTitle: string; guideType: GuideType } }
+  | { type: 'START_RECORDING'; payload: { guideTitle: string; guideType: GuideType; learningObjectives?: string } }
   | { type: 'STOP_RECORDING' }
   | { type: 'PAUSE_RECORDING' }
   | { type: 'USER_EVENT'; payload: UserEventPayload }

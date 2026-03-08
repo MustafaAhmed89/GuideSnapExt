@@ -24,6 +24,8 @@ export interface RecordedStep {
   screenshotAnnotated: string;
   pageTitle: string;
   pageUrl: string;
+  tip?: string;
+  whyItMatters?: string;
 }
 
 export interface Guide {
@@ -33,6 +35,7 @@ export interface Guide {
   createdAt: number;
   updatedAt: number;
   stepIds: string[];
+  learningObjectives?: string;
 }
 
 export type RecordingState = 'idle' | 'recording' | 'paused';

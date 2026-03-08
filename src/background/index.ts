@@ -256,6 +256,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         id: guideId,
         title,
         type: guideType,
+        learningObjectives: message.payload.learningObjectives || undefined,
         createdAt: Date.now(),
         updatedAt: Date.now(),
         stepIds: [],

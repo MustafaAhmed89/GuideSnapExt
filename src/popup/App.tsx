@@ -1,12 +1,11 @@
 import { useState, useEffect } from 'react';
 import { HomeView } from './components/HomeView';
 import { GuidesListView } from './components/GuidesListView';
-import { StepEditor } from './components/StepEditor';
 import { ExportPanel } from './components/ExportPanel';
 import { loadStepsForGuide } from '../shared/storage';
 import type { Guide, RecordedStep, RecordingState, GuideType } from '../shared/types';
 
-type View = 'home' | 'guides' | 'editor' | 'export';
+type View = 'home' | 'guides' | 'export';
 
 interface RecordingInfo {
   state: RecordingState;
@@ -51,8 +50,8 @@ export function App() {
     return () => chrome.runtime.onMessage.removeListener(listener);
   }, []);
 
-  async function handleStartRecording(title: string, guideType: GuideType) {
-    chrome.runtime.sendMessage({ type: 'START_RECORDING', payload: { guideTitle: title, guideType } });
+  async function handleStartRecording(title: string, guideType: GuideType, learningObjectives?: string) {
+    chrome.runtime.sendMessage({ type: 'START_RECORDING', payload: { guideTitle: title, guideType, learningObjectives } });
   }
 
   function handleStopRecording() {
@@ -63,11 +62,9 @@ export function App() {
     chrome.runtime.sendMessage({ type: 'PAUSE_RECORDING' });
   }
 
-  async function openEditor(guide: Guide) {
-    const steps = await loadStepsForGuide(guide.id);
-    setActiveGuide(guide);
-    setActiveSteps(steps);
-    setView('editor');
+  function openEditor(guide: Guide) {
+    const url = chrome.runtime.getURL('src/editor/index.html') + '?guideId=' + guide.id;
+    chrome.tabs.create({ url });
   }
 
   async function openExport(guide: Guide) {
@@ -89,30 +86,13 @@ export function App() {
     );
   }
 
-  if (view === 'editor' && activeGuide) {
-    return (
-      <div className="h-[598px] flex flex-col">
-        <StepEditor
-          guide={activeGuide}
-          initialSteps={activeSteps}
-          onBack={() => setView('home')}
-          onExport={(guide, steps) => {
-            setActiveGuide(guide);
-            setActiveSteps(steps);
-            setView('export');
-          }}
-        />
-      </div>
-    );
-  }
-
   if (view === 'export' && activeGuide) {
     return (
       <div className="h-[598px] flex flex-col">
         <ExportPanel
           guide={activeGuide}
           steps={activeSteps}
-          onBack={() => setView(activeSteps.length > 0 ? 'editor' : 'home')}
+          onBack={() => setView('guides')}
         />
       </div>
     );
