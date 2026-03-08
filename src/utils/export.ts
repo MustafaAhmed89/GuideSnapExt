@@ -347,7 +347,10 @@ export async function exportToZIP(
       {
         id: guide.id,
         title: guide.title,
+        type: guide.type ?? 'how-to-tutorial',
         createdAt: new Date(guide.createdAt).toISOString(),
+        updatedAt: new Date(guide.updatedAt).toISOString(),
+        ...(guide.learningObjectives ? { learningObjectives: guide.learningObjectives } : {}),
         steps: steps.map((s, i) => ({
           step: i + 1,
           description: s.description,
@@ -355,6 +358,8 @@ export async function exportToZIP(
           pageUrl: s.pageUrl,
           eventType: s.eventType,
           image: `step-${String(i + 1).padStart(2, '0')}.png`,
+          ...(s.tip ? { tip: s.tip } : {}),
+          ...(s.whyItMatters ? { whyItMatters: s.whyItMatters } : {}),
         })),
       },
       null,
@@ -372,13 +377,48 @@ export async function exportToZIP(
     }
   }
 
-  // Simple README viewer
-  const readmeLinks = steps
-    .map((s, i) => `<li><a href="step-${String(i + 1).padStart(2, '0')}.png">${options.includeStepNumbers ? `Step ${i + 1}` : `${i + 1}`}</a>${s.description ? `: ${escapeHtml(s.description)}` : ''}</li>`)
-    .join('\n');
+  // README viewer
+  const isTraining = guide.type === 'employee-training';
+  const readmeSteps = steps.map((s, i) => {
+    const img = `step-${String(i + 1).padStart(2, '0')}.png`;
+    const extra = isTraining && s.whyItMatters
+      ? `<p style="margin:6px 0 0;font-size:13px;color:#1e40af;background:#eff6ff;border-left:3px solid #3b82f6;padding:6px 10px"><strong>Why this matters:</strong> ${escapeHtml(s.whyItMatters)}</p>`
+      : !isTraining && s.tip
+        ? `<p style="margin:6px 0 0;font-size:13px;color:#9a3412;background:#fff7ed;border-left:3px solid #f97316;padding:6px 10px"><strong>Tip:</strong> ${escapeHtml(s.tip)}</p>`
+        : '';
+    return `<li style="margin-bottom:32px">
+      <p style="font-weight:600;margin:0 0 8px">${options.includeStepNumbers ? `Step ${i + 1}: ` : ''}${escapeHtml(s.description)}</p>
+      <img src="${img}" style="max-width:100%;border-radius:8px;border:1px solid #e5e7eb" />
+      ${extra}
+    </li>`;
+  }).join('\n');
+
+  const objectivesBlock = isTraining && guide.learningObjectives
+    ? `<div style="background:#eff6ff;border-left:4px solid #3b82f6;border-radius:8px;padding:16px 20px;margin-bottom:28px"><p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#2563eb;margin:0 0 6px">Learning Objectives</p><p style="font-size:14px;color:#1e3a8a;margin:0">${escapeHtml(guide.learningObjectives)}</p></div>`
+    : '';
+
   zip.file(
     'README.html',
-    `<!DOCTYPE html><html><head><title>${escapeHtml(guide.title)}</title></head><body><h1>${escapeHtml(guide.title)}</h1><ol>${readmeLinks}</ol></body></html>`
+    `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>${escapeHtml(guide.title)}</title>
+<style>
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:860px;margin:40px auto;padding:0 24px;color:#1a1a1a;background:#f8f8f8}
+  h1{font-size:28px;margin-bottom:4px}
+  .subtitle{font-size:14px;color:#6b7280;margin-bottom:28px}
+  ol{padding-left:24px}
+</style>
+</head>
+<body>
+  <h1>${escapeHtml(guide.title)}</h1>
+  <p class="subtitle">${isTraining ? 'Training &amp; Implementation Guide' : 'Step-by-Step User Guide'} &middot; ${steps.length} step${steps.length !== 1 ? 's' : ''}</p>
+  ${objectivesBlock}
+  <ol>${readmeSteps}</ol>
+</body>
+</html>`
   );
 
   const blob = await zip.generateAsync({ type: 'blob' });
