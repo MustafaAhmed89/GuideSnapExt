@@ -6,6 +6,7 @@ let shadowRoot: ShadowRoot | null = null;
 let stepCountEl: HTMLElement | null = null;
 let stateEl: HTMLElement | null = null;
 let dotEl: HTMLElement | null = null;
+let pauseBtn: HTMLButtonElement | null = null;
 
 const STYLES = `
   :host { all: initial; }
@@ -90,8 +91,9 @@ export function createOverlay() {
   dotEl = shadowRoot.getElementById('gs-dot');
   stepCountEl = shadowRoot.getElementById('gs-steps');
   stateEl = shadowRoot.getElementById('gs-state');
+  pauseBtn = shadowRoot.getElementById('gs-pause') as HTMLButtonElement;
 
-  shadowRoot.getElementById('gs-pause')!.addEventListener('click', () => {
+  pauseBtn.addEventListener('click', () => {
     chrome.runtime.sendMessage({ type: 'PAUSE_RECORDING' });
   });
 
@@ -110,6 +112,7 @@ export function updateOverlay(stepCount: number, state: RecordingState) {
     if (state === 'paused') dotEl.classList.add('paused');
     else dotEl.classList.remove('paused');
   }
+  if (pauseBtn) pauseBtn.textContent = state === 'paused' ? 'Resume' : 'Pause';
 }
 
 export function removeOverlay() {
@@ -119,6 +122,7 @@ export function removeOverlay() {
   stepCountEl = null;
   stateEl = null;
   dotEl = null;
+  pauseBtn = null;
 }
 
 export function hideOverlay() {
