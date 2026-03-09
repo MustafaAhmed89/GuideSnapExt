@@ -108,10 +108,16 @@ function generateDescription(event: UserEventPayload): string {
     }
     if (tag === 'select') return label ? `Open "${label}" dropdown` : 'Open dropdown';
     if (tag === 'textarea') return label ? `Click on the "${label}" field` : 'Click on text area';
-    if (tag === 'li') return `Click "${display || 'menu item'}"`;
+    if (tag === 'li') return `Select "${display || 'option'}"`;
     return display ? `Click "${display}"` : `Click on ${tag || 'element'}`;
   }
   if (event.eventType === 'input') {
+    if (tag === 'select') {
+      const label = getBestLabel(el) || text || 'dropdown';
+      return event.inputValue
+        ? `Select "${event.inputValue}" from "${label}" dropdown`
+        : 'Change dropdown selection';
+    }
     const fieldName = (el ? getBestLabel(el) : '') || text || tag || 'field';
     if (event.inputValue) return `Type "${event.inputValue}" in the ${fieldName}`;
     return `Enter text in the ${fieldName}`;
@@ -173,8 +179,10 @@ async function handleUserEvent(event: UserEventPayload, senderTabId: number) {
   // 1. Hide overlay so it doesn't appear in the screenshot, then capture
   try {
     await chrome.tabs.sendMessage(senderTabId, { type: 'HIDE_OVERLAY' });
-    // Give the browser one paint cycle to actually hide the element
-    await new Promise<void>((resolve) => setTimeout(resolve, 60));
+    // Wait one paint cycle (~16ms) for the overlay to hide, plus a small buffer.
+    // Kept short (25ms) so the screenshot is captured before the user's click event
+    // fires and closes any open dropdown/popup (~50ms+ for deliberate clicks).
+    await new Promise<void>((resolve) => setTimeout(resolve, 25));
   } catch {
     // Tab may not have a content script (e.g. chrome:// pages) — safe to ignore
   }
