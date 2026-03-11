@@ -7,6 +7,7 @@ export interface ExportOptions {
   includeDescriptions: boolean;
   includeStepNumbers: boolean;
   useAnnotated: boolean;
+  includeUrls: boolean;
   headerImage?: string; // base64 data URL — used in PDF and DOCX headers
   footerText?: string;  // plain text — used in PDF and DOCX footers
 }
@@ -263,7 +264,7 @@ export function exportToHTML(
         : ''
       }
       <img class="step-img" src="${options.useAnnotated ? step.screenshotAnnotated : step.screenshotRaw}" alt="Step ${i + 1}" loading="lazy" />
-      ${options.includeStepNumbers ? `<div class="step-meta">${escapeHtml(step.pageTitle)} — ${escapeHtml(step.pageUrl)}</div>` : ''}
+      ${options.includeUrls ? `<div class="step-meta">${escapeHtml(step.pageTitle)} — ${escapeHtml(step.pageUrl)}</div>` : ''}
       ${guide.type === 'how-to-tutorial' && step.tip ? `<div class="step-tip"><strong>Tip:</strong> ${escapeHtml(step.tip)}</div>` : ''}
       ${guide.type === 'employee-training' && step.whyItMatters ? `<div class="step-why"><strong>Why this matters:</strong> ${escapeHtml(step.whyItMatters)}</div>` : ''}
     </section>`
@@ -573,8 +574,8 @@ export async function exportToDOCX(
       );
     }
 
-    // Page URL / title metadata (skipped when step numbering is off)
-    if (options.includeStepNumbers) {
+    // Page URL / title metadata
+    if (options.includeUrls) {
       children.push(
         new Paragraph({
           children: [
