@@ -96,3 +96,44 @@
 2. Open the PDF and inspect each page
 
 **Expected result:** No URL text appears in the PDF (URL display was never implemented for PDF).
+
+---
+
+## fix: DOCX export — remove forced page breaks between steps
+
+### TC-08 — Steps flow continuously without forced page breaks
+**What is being tested:** Exporting a guide as DOCX no longer places each step on its own page.
+
+**Steps to verify:**
+1. Record a guide with 3 or more steps
+2. Open the Export panel, select format **Word (.docx)**, click Export
+3. Open the downloaded `.docx` file in Word or LibreOffice Writer
+
+**Expected result:** All steps appear in a continuous flow on as few pages as needed; no artificial blank space or forced page-per-step layout.
+
+### TC-09 — Visual divider separates steps
+**What is being tested:** A subtle horizontal rule appears between each step to maintain readability.
+
+**Steps to verify:**
+1. Export a 3-step guide as DOCX
+2. Open the file and scroll through the content
+
+**Expected result:** A light grey horizontal line is visible between each pair of consecutive steps; the last step has no trailing divider.
+
+### TC-10 — Step heading stays with its content at natural page breaks
+**What is being tested:** `keepNext` ensures step headings and descriptions are not orphaned at the bottom of a page.
+
+**Steps to verify:**
+1. Export a guide with enough steps to span multiple pages naturally
+2. Open the DOCX and find any step that begins near the bottom of a page
+
+**Expected result:** The "Step X of Y" heading and description text move together with the screenshot to the next page rather than being split across pages.
+
+### TC-11 — Cover page still has its own page
+**What is being tested:** The cover page page-break is preserved; only inter-step breaks are removed.
+
+**Steps to verify:**
+1. Export any guide as DOCX
+2. Open the file
+
+**Expected result:** The cover page (title, subtitle, date, step count) occupies its own page; step content begins on page 2.
