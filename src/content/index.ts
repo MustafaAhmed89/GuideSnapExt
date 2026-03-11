@@ -116,6 +116,22 @@ function getElementInfo(el: Element): ElementInfo {
       }
     }
   }
+  // Strategy 3: previous siblings of element (label adjacent to field in same container)
+  if (!labelText) {
+    let sib = el.previousElementSibling;
+    for (let i = 0; i < 3 && sib; i++, sib = sib.previousElementSibling) {
+      const t = (sib as HTMLElement).innerText?.trim();
+      if (t && t.length > 0 && t.length < 60) { labelText = t; break; }
+    }
+  }
+  // Strategy 4: previous siblings of element's parent (table/grid: label in prior cell)
+  if (!labelText && el.parentElement) {
+    let sib = el.parentElement.previousElementSibling;
+    for (let i = 0; i < 3 && sib; i++, sib = sib.previousElementSibling) {
+      const t = (sib as HTMLElement).innerText?.trim();
+      if (t && t.length > 0 && t.length < 60) { labelText = t; break; }
+    }
+  }
 
   return {
     tag,
@@ -162,8 +178,12 @@ function resolveClickTarget(el: Element): Element {
   return el;
 }
 
-function onClickCapture(e: MouseEvent) {
-  console.log('[GuideSnap] Click detected, isRecording:', isRecording, 'isPaused:', isPaused);
+// Fired on mousedown (not click) so the screenshot is captured before the browser
+// processes the click event — this means dropdown/popup states are still visible
+// in the screenshot rather than already closed by the time we capture.
+function onMousedownCapture(e: MouseEvent) {
+  if (e.button !== 0) return; // left-click only; ignore right/middle
+  console.log('[GuideSnap] Mousedown detected, isRecording:', isRecording, 'isPaused:', isPaused);
   if (!isRecording || isPaused) return;
 
   const raw = e.target as Element | null;
@@ -178,7 +198,7 @@ function onClickCapture(e: MouseEvent) {
     pageTitle: document.title,
     pageUrl: location.href,
   };
-  console.log('[GuideSnap] Sending click event:', payload);
+  console.log('[GuideSnap] Sending mousedown event:', payload);
   sendEvent(payload);
 }
 
@@ -189,11 +209,16 @@ function onChangeCapture(e: Event) {
   if (!target) return;
   if ((target as HTMLInputElement).type === 'password') return; // never log passwords
 
+  // For <select>, use the option's visible display text, not its value attribute
+  const inputValue = target.tagName.toLowerCase() === 'select'
+    ? ((target as HTMLSelectElement).options[(target as HTMLSelectElement).selectedIndex]?.text || target.value).substring(0, 80)
+    : target.value.substring(0, 80);
+
   const payload: UserEventPayload = {
     eventType: 'input',
     element: getElementInfo(target),
     clickPoint: null,
-    inputValue: target.value.substring(0, 80),
+    inputValue,
     pageTitle: document.title,
     pageUrl: location.href,
   };
@@ -239,7 +264,7 @@ function isOwnOverlay(el: Element): boolean {
 }
 
 function attachListeners() {
-  document.addEventListener('click', onClickCapture, true);
+  document.addEventListener('mousedown', onMousedownCapture, true);
   document.addEventListener('change', onChangeCapture, true);
   window.addEventListener('popstate', onNavigation);
   window.addEventListener('hashchange', onNavigation);
@@ -247,7 +272,7 @@ function attachListeners() {
 }
 
 function detachListeners() {
-  document.removeEventListener('click', onClickCapture, true);
+  document.removeEventListener('mousedown', onMousedownCapture, true);
   document.removeEventListener('change', onChangeCapture, true);
   window.removeEventListener('popstate', onNavigation);
   window.removeEventListener('hashchange', onNavigation);

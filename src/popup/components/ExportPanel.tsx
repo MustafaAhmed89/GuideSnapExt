@@ -17,6 +17,7 @@ export function ExportPanel({ guide, steps, onBack }: Props) {
   const [includeDescriptions, setIncludeDescriptions] = useState(true);
   const [includeStepNumbers, setIncludeStepNumbers] = useState(true);
   const [useAnnotated, setUseAnnotated] = useState(true);
+  const [includeUrls, setIncludeUrls] = useState(true);
   const [headerImage, setHeaderImage] = useState<string | undefined>(undefined);
   const [footerText, setFooterText] = useState('');
   const [exporting, setExporting] = useState(false);
@@ -68,6 +69,7 @@ export function ExportPanel({ guide, steps, onBack }: Props) {
         includeDescriptions,
         includeStepNumbers,
         useAnnotated,
+        includeUrls,
         headerImage: headerImage,
         footerText: footerText.trim() || undefined,
       };
@@ -247,6 +249,15 @@ export function ExportPanel({ guide, steps, onBack }: Props) {
                 className="w-4 h-4 rounded accent-brand-500"
               />
               <span className="text-sm text-gray-700">Use annotated screenshots</span>
+            </label>
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={includeUrls}
+                onChange={(e) => setIncludeUrls(e.target.checked)}
+                className="w-4 h-4 rounded accent-brand-500"
+              />
+              <span className="text-sm text-gray-700">Include page URLs</span>
             </label>
           </div>
         </div>
