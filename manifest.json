@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "GuideSnap",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Record your browser actions and instantly generate annotated step-by-step guides in PDF, Word, HTML, or ZIP.",
   "permissions": [
     "activeTab",
