@@ -560,6 +560,8 @@ export async function exportToDOCX(
         new Paragraph({
           text: `Step ${i + 1} of ${steps.length}`,
           heading: HeadingLevel.HEADING_1,
+          spacing: { after: 120 },
+          keepNext: true,
         })
       );
     }
@@ -569,7 +571,8 @@ export async function exportToDOCX(
       children.push(
         new Paragraph({
           children: [new TextRun({ text: step.description, size: 24 })],
-          spacing: { after: 160 },
+          spacing: { after: 120 },
+          keepNext: true,
         })
       );
     }
@@ -586,7 +589,8 @@ export async function exportToDOCX(
               italics: true,
             }),
           ],
-          spacing: { after: 160 },
+          spacing: { after: 120 },
+          keepNext: true,
         })
       );
     }
@@ -620,9 +624,16 @@ export async function exportToDOCX(
       }
     }
 
-    // Page break between steps (not after the last one)
+    // Horizontal divider between steps (not after the last one)
     if (i < steps.length - 1) {
-      children.push(new Paragraph({ children: [new PageBreak()] }));
+      children.push(
+        new Paragraph({
+          spacing: { before: 240, after: 240 },
+          border: {
+            bottom: { style: BorderStyle.SINGLE, size: 6, color: 'E0E0E0', space: 1 },
+          },
+        })
+      );
     }
   }
 

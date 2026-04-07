@@ -112,6 +112,12 @@ function generateDescription(event: UserEventPayload): string {
     return display ? `Click "${display}"` : `Click on ${tag || 'element'}`;
   }
   if (event.eventType === 'input') {
+    if (tag === 'input') {
+      const t = el?.inputType;
+      const label = el ? getBestLabel(el) : '';
+      if (t === 'checkbox') return label ? `Check "${label}"` : 'Check checkbox';
+      if (t === 'radio') return label ? `Select "${label}"` : 'Select radio option';
+    }
     if (tag === 'select') {
       const label = getBestLabel(el) || text || 'dropdown';
       return event.inputValue

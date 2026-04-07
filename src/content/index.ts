@@ -208,6 +208,11 @@ function onChangeCapture(e: Event) {
   const target = e.target as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | null;
   if (!target) return;
   if ((target as HTMLInputElement).type === 'password') return; // never log passwords
+  // Checkboxes and radio buttons are already captured by the mousedown handler with
+  // correct "Check / Select" descriptions — skip them here to avoid duplicate steps
+  // with wrong "Type '...' in ..." descriptions derived from the value attribute.
+  const itype = (target as HTMLInputElement).type;
+  if (itype === 'checkbox' || itype === 'radio') return;
 
   // For <select>, use the option's visible display text, not its value attribute
   const inputValue = target.tagName.toLowerCase() === 'select'
